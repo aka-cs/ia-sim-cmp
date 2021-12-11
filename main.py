@@ -1,4 +1,5 @@
 from tokenizer import Tokenizer, TokenMatcher, TokenType
+from _parser import Parser
 
 if __name__ == '__main__':
 
@@ -33,4 +34,6 @@ if __name__ == '__main__':
     with open('test/program.txt', 'r') as file:
         program = file.read()
 
-    print('\n'.join(map(str, tokenizer.analyze(program))))
+    tokens = tokenizer.analyze(program)
+    parsed = Parser(tokens)
+    print(parsed.parse())

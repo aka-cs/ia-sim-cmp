@@ -13,12 +13,16 @@ class TokenType(Enum):
     MINUS = auto()
     MULTIPLY = auto()
     DIVIDE = auto()
+    EXCLAMATION = auto()
 
     # one or two characters
     GREATER = auto()
     GREATER_EQUAL = auto()
     LOWER = auto()
     LOWER_EQUAL = auto()
+    EQUAL = auto()
+    EQUAL_EQUAL = auto()
+    EQUAL_DIFFERENT = auto()
 
     # literals
     NUMBER = auto()
@@ -35,6 +39,8 @@ class TokenType(Enum):
     IF = auto()
     ELSE = auto()
     NULL = auto()
+    TRUE = auto()
+    FALSE = auto()
 
     # End of File
     EOF = auto()

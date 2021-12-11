@@ -20,7 +20,7 @@ class Tokenizer:
     def __init__(self, token_matchers: List[TokenMatcher]):
         self.token_matchers = token_matchers
 
-    def analyze(self, program: str):
+    def analyze(self, program: str) -> [Token]:
         string_list = program.split('"')
         word_list = []
         for i in range(len(string_list)):
@@ -35,4 +35,5 @@ class Tokenizer:
                 if token:
                     tokens.append(token)
                     break
+        tokens.append(Token(TokenType.EOF, ""))
         return tokens
