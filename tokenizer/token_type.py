@@ -1,30 +1,40 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class TokenType(Enum):
-    number = 0
-    string = 1
-    plus = 2
-    minus = 3
-    multiply = 4
-    divide = 5
-    left_parenthesis = 6
-    right_parenthesis = 7
-    left_bracket = 8
-    right_bracket = 9
-    let = 10
-    fun = 11
-    vehicle = 12
-    cargo = 13
-    place = 14
-    while_ = 15
-    if_ = 16
-    else_ = 17
-    gt = 18
-    gte = 19
-    lw = 20
-    lwe = 21
-    colon = 22
-    coma = 23
-    literal = 1000
+    # single character
+    LEFT_PARENTHESIS = auto()
+    RIGHT_PARENTHESIS = auto()
+    LEFT_BRACKET = auto()
+    RIGHT_BRACKET = auto()
+    COMMA = auto()
+    DOT = auto()
+    PLUS = auto()
+    MINUS = auto()
+    MULTIPLY = auto()
+    DIVIDE = auto()
 
+    # one or two characters
+    GREATER = auto()
+    GREATER_EQUAL = auto()
+    LOWER = auto()
+    LOWER_EQUAL = auto()
+
+    # literals
+    NUMBER = auto()
+    STRING = auto()
+    LITERAL = auto()
+
+    # keywords
+    LET = auto()
+    FUN = auto()
+    VEHICLE = auto()
+    CARGO = auto()
+    PLACE = auto()
+    WHILE = auto()
+    IF = auto()
+    ELSE = auto()
+    NULL = auto()
+
+    # End of File
+    EOF = auto()
