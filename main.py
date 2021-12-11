@@ -35,5 +35,7 @@ if __name__ == '__main__':
         program = file.read()
 
     tokens = tokenizer.analyze(program)
-    parsed = Parser(tokens)
-    print(parsed.parse())
+    parser = Parser(tokens)
+    result = (parser.parse())
+    print(result)
+    print(result.eval())
