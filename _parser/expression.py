@@ -13,11 +13,18 @@ class Expression:
 
 @dataclass
 class Binary(Expression):
+    """
+    Binary expression representation
+    Every binary operation has a left expression, an operand and a right expression
+    """
     left: Expression
     operator: Token
     right: Expression
 
     def eval(self):
+        """
+        Evaluates the node of the syntax tree by evaluating left and right expressions and then applying the operator
+        """
         left = self.left.eval()
         right = self.right.eval()
         if self.operator.type == TokenType.MINUS:
@@ -47,10 +54,17 @@ class Binary(Expression):
 
 @dataclass
 class Unary(Expression):
+    """
+    Unary expressions representation
+    Every unary representation has an operator and an operand
+    """
     operator: Token
     right: Expression
 
     def eval(self):
+        """
+        Evaluates the node by evaluating the expression on the right and applying the unary operator
+        """
         if self.operator.type == TokenType.MINUS:
             return -self.right.eval()
         if self.operator.type == TokenType.EXCLAMATION:
@@ -62,9 +76,16 @@ class Unary(Expression):
 
 @dataclass
 class Grouping(Expression):
+    """
+    Grouping expressions representation
+    Stores the expression inside the grouping tokens
+    """
     expression: Expression
 
     def eval(self):
+        """
+        Evaluates the grouping node by simply evaluating the expression it contains
+        """
         return self.expression.eval()
 
     def __str__(self):
@@ -73,9 +94,16 @@ class Grouping(Expression):
 
 @dataclass
 class Literal(Expression):
+    """
+    Literal representation
+    Stores the value for a literal
+    """
     value: object
 
     def eval(self):
+        """
+        Evaluates a literal by returning it's corresponding value
+        """
         return float(self.value)
 
     def __str__(self):
