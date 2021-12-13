@@ -26,9 +26,11 @@ class Tokenizer:
         tokens = []
         line = 1
         column = 1
+        program = program + '\n'
         while program:
             if program[0] == " ":
                 program = program[1:]
+                column += 1
                 continue
             # current_line = program[:program.find('\n') or len(program)]
             # print(f"matching {current_line}")
