@@ -13,16 +13,21 @@ class Scope:
         self.father = father
 
     def declaration(self, name):
-        if self.valid_declaration(name):
+        if not self.exists_scoped_variable(name):
             self.variables[name] = None
-        else:
-            raise Exception()
+            return True
+        return False
 
-    def valid_declaration(self, name):
-        return name not in self.variables
+    def obtain_value(self, name):
+        if name in self.variables:
+            return self.variables[name], True
+        return self.obtain_value(self.father) if self.father else None, False
 
-    def valid_assignation(self, name):
-        return (name in self.variables) or (self.father.valid_assignation(name) if self.father else False)
+    def exists_scoped_variable(self, name):
+        return name in self.variables
+
+    def exists_variable(self, name):
+        return self.obtain_value(name)[1]
 
 
 class Expression:

@@ -1,7 +1,7 @@
 """
 expression -> assignment
-assignment -> declaration "=" equality | equality
-declaration -> "let" IDENTIFIER | IDENTIFIER
+assignment -> variable "=" equality | equality
+variable -> "let" IDENTIFIER | IDENTIFIER
 equality -> comparison ( ("!=" | "==") comparison)*
 comparison -> term ( (">" | ">=" | "<" | "<=") term)*
 term ->  factor ( ( "-" | "+" ) factor)*
@@ -9,7 +9,6 @@ factor -> unary ( ( "/" | "*" ) unary)*
 unary -> ( "!" | "-" ) unary | primary
 primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")"
 """
-from typing import Optional
 
 from tokenizer.token_ import Token, TokenType
 from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Scope
@@ -37,7 +36,7 @@ class Parser:
         """
         Solves assignment production
         """
-        if self.declaration():  # if the expression is a declaration
+        if self.variable():  # if the left expression is a declaration
             var_name = self.previous().text  # save the variable name
             if self.match(TokenType.EQUAL):  # if the next operator is '='
                 right = self.equality()  # builds the expression on the right
@@ -48,22 +47,23 @@ class Parser:
         # otherwise the equality expresion is returned
         return self.equality()
 
-    def declaration(self) -> bool:
+    def variable(self) -> bool:
         """
-        Solves declaration production
+        Solves variable production
         """
         if self.match(TokenType.LET):  # if the actual token is 'let'
             if self.match(TokenType.IDENTIFIER):  # and the next token is an identifier,
-                self.actual_scope.declaration(self.previous())  # then declare the variable
-                return True  # and return true
+                if self.actual_scope.declaration(self.previous()):  # then declare the variable
+                    return True  # if the variable is declared correctly, return true
+                raise Exception()  # else, raise exception
             raise Exception()  # if the next token is not an identifier, raise Exception
 
         if self.match(TokenType.IDENTIFIER):  # if the actual token is an identifier
-            if self.actual_scope.valid_assignation(self.previous().text):  # check if it's a valid assignation
+            if self.actual_scope.exists_variable(self.previous().text):  # check if it's a valid assignation
                 return True  # if it is, return True
             raise Exception()  # else, raise exception
 
-        return False  # otherwhise, return False
+        return False  # otherwise, return False
 
     def binary(self, expression, *types: [TokenType]) -> Binary:
         """
@@ -133,6 +133,11 @@ class Parser:
             return Literal(None)
         if self.match(TokenType.NUMBER, TokenType.STRING):
             return Literal(self.previous().text)
+        if self.match(TokenType.IDENTIFIER):
+            variable_value, variable_exists = self.actual_scope.obtain_value(self.previous().text)
+            if variable_exists:
+                return Literal(variable_value)
+            raise Exception()
 
         if self.match(TokenType.LEFT_PARENTHESIS):
             # if it's a left parenthesis, produce the expression and check for right parenthesis
