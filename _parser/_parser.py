@@ -131,7 +131,9 @@ class Parser:
             return Literal(True)
         if self.match(TokenType.NULL):
             return Literal(None)
-        if self.match(TokenType.NUMBER, TokenType.STRING):
+        if self.match(TokenType.NUMBER):
+            return Literal(float(self.previous().text))
+        if self.match(TokenType.STRING):
             return Literal(self.previous().text)
         if self.match(TokenType.IDENTIFIER):
             variable_value, variable_exists = self.actual_scope.obtain_value(self.previous().text)

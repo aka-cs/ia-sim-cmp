@@ -4,8 +4,8 @@ from _parser import Parser, Scope
 if __name__ == '__main__':
 
     matches = [
-        TokenMatcher(r'-?\d+(?:\.\d+)?', TokenType.NUMBER),
-        TokenMatcher(r'"[^"]+"', TokenType.STRING),
+        TokenMatcher(r'(-?\d+(?:\.\d+)?)[^\w]', TokenType.NUMBER),
+        TokenMatcher(r'"(.+?[^\\])"', TokenType.STRING),
         TokenMatcher(r'\+', TokenType.PLUS),
         TokenMatcher(r'\-', TokenType.MINUS),
         TokenMatcher(r'\*', TokenType.MULTIPLY),
@@ -14,20 +14,25 @@ if __name__ == '__main__':
         TokenMatcher(r'\)', TokenType.RIGHT_PARENTHESIS),
         TokenMatcher(r'\{', TokenType.LEFT_BRACKET),
         TokenMatcher(r'\}', TokenType.RIGHT_BRACKET),
-        TokenMatcher(r'let', TokenType.LET),
-        TokenMatcher(r'fun', TokenType.FUN),
-        TokenMatcher(r'if', TokenType.IF),
-        TokenMatcher(r'else', TokenType.ELSE),
-        TokenMatcher(r'while', TokenType.WHILE),
-        TokenMatcher(r'null', TokenType.NULL),
-        TokenMatcher(r'>', TokenType.GREATER),
-        TokenMatcher(r'<', TokenType.LOWER),
+        TokenMatcher(r'(let) ', TokenType.LET),
+        TokenMatcher(r'(fun) ', TokenType.FUN),
+        TokenMatcher(r'(if)[^\w]', TokenType.IF),
+        TokenMatcher(r'(else)[^\w]', TokenType.ELSE),
+        TokenMatcher(r'(while)[^\w]', TokenType.WHILE),
+        TokenMatcher(r'(null)[^\w]', TokenType.NULL),
+        TokenMatcher(r'(true)[^\w]', TokenType.TRUE),
+        TokenMatcher(r'(false)[^\w]', TokenType.FALSE),
         TokenMatcher(r'>=', TokenType.GREATER_EQUAL),
         TokenMatcher(r'<=', TokenType.LOWER_EQUAL),
+        TokenMatcher(r'>', TokenType.GREATER),
+        TokenMatcher(r'<', TokenType.LOWER),
+        TokenMatcher(r'==', TokenType.EQUAL_EQUAL),
         TokenMatcher(r'=', TokenType.EQUAL),
-        TokenMatcher(r'\w[\w\d_]*', TokenType.IDENTIFIER),
+        TokenMatcher(r'[a-zA-Z_][\w\d_]*', TokenType.IDENTIFIER),
         TokenMatcher(r'\.', TokenType.DOT),
-        TokenMatcher(r',', TokenType.COMMA)
+        TokenMatcher(r',', TokenType.COMMA),
+        TokenMatcher(r';', TokenType.SEMICOLON),
+        TokenMatcher(r'\n|\r|\n\r', TokenType.LINEBREAK)
     ]
 
     tokenizer = Tokenizer(matches)
@@ -37,6 +42,7 @@ if __name__ == '__main__':
 
     global_scope = Scope(None)
     tokens = tokenizer.analyze(program)
+
     parser = Parser(tokens, global_scope)
 
     while parser.current < len(tokens) - 1:

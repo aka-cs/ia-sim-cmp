@@ -9,6 +9,8 @@ class TokenType(Enum):
     RIGHT_BRACKET = auto()
     COMMA = auto()
     DOT = auto()
+    SEMICOLON = auto()
+    LINEBREAK = auto()
     PLUS = auto()
     MINUS = auto()
     MULTIPLY = auto()

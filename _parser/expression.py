@@ -148,7 +148,7 @@ class Literal(Expression):
         """
         Evaluates a literal by returning it's corresponding value
         """
-        return float(self.value)
+        return self.value
 
     def __str__(self):
         return f"{self.value}"
