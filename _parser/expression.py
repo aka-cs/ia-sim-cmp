@@ -1,7 +1,28 @@
+import string
 from dataclasses import dataclass
 from abc import abstractmethod
+from typing import Optional
+
 from tokenizer.token_ import Token
 from tokenizer.token_type import TokenType
+
+
+class Scope:
+    def __init__(self, father: Optional['Scope']):
+        self.variables = {}
+        self.father = father
+
+    def declaration(self, name):
+        if self.valid_declaration(name):
+            self.variables[name] = None
+        else:
+            raise Exception()
+
+    def valid_declaration(self, name):
+        return name not in self.variables
+
+    def valid_assignation(self, name):
+        return (name in self.variables) or (self.father.valid_assignation(name) if self.father else False)
 
 
 class Expression:
@@ -9,6 +30,24 @@ class Expression:
     @abstractmethod
     def eval(self):
         pass
+
+
+@dataclass
+class Assignment(Expression):
+    var_name: string
+    value: Expression
+    variables: dict
+
+    def eval(self):
+        """
+        Evaluates the node of the syntax tree by evaluating right expression and assign its value
+        to the corresponding variable
+        """
+        self.variables[self.var_name] = self.value.eval()
+        return self.variables[self.var_name]
+
+    def __str__(self):
+        return f"({self.var_name} = {self.value})"
 
 
 @dataclass

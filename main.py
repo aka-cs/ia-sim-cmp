@@ -1,5 +1,5 @@
 from tokenizer import Tokenizer, TokenMatcher, TokenType
-from _parser import Parser
+from _parser import Parser, Scope
 
 if __name__ == '__main__':
 
@@ -24,8 +24,9 @@ if __name__ == '__main__':
         TokenMatcher(r'<', TokenType.LOWER),
         TokenMatcher(r'>=', TokenType.GREATER_EQUAL),
         TokenMatcher(r'<=', TokenType.LOWER_EQUAL),
-        TokenMatcher(r'\w[\w\d_]+', TokenType.LITERAL),
-        TokenMatcher(r'.', TokenType.DOT),
+        TokenMatcher(r'=', TokenType.EQUAL),
+        TokenMatcher(r'\w[\w\d_]*', TokenType.IDENTIFIER),
+        TokenMatcher(r'\.', TokenType.DOT),
         TokenMatcher(r',', TokenType.COMMA)
     ]
 
@@ -34,8 +35,12 @@ if __name__ == '__main__':
     with open('test/program.txt', 'r') as file:
         program = file.read()
 
+    global_scope = Scope(None)
     tokens = tokenizer.analyze(program)
-    parser = Parser(tokens)
+    parser = Parser(tokens, global_scope)
+    result = (parser.parse())
+    print(result)
+    print(result.eval())
     result = (parser.parse())
     print(result)
     print(result.eval())

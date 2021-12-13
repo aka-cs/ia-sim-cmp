@@ -27,7 +27,7 @@ class TokenType(Enum):
     # literals
     NUMBER = auto()
     STRING = auto()
-    LITERAL = auto()
+    IDENTIFIER = auto()
 
     # keywords
     LET = auto()
