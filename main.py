@@ -1,5 +1,6 @@
 from tokenizer import Tokenizer, TokenMatcher, TokenType
-from _parser import Parser, Scope
+from _parser import Parser
+from interpreter import Interpreter, Scope
 
 if __name__ == '__main__':
 
@@ -48,4 +49,5 @@ if __name__ == '__main__':
     while parser.current < len(tokens) - 1:
         result = (parser.parse())
         print(result)
-        print(result.eval())
+        interpreter = Interpreter()
+        interpreter.interpret(result)
