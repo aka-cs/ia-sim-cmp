@@ -11,11 +11,11 @@ primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")"
 """
 
 from tokenizer.token_ import Token, TokenType
-from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Scope
+from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping
 
 
 class Parser:
-    def __init__(self, tokens: [Token], scope: Scope):
+    def __init__(self, tokens: [Token], scope):
         self.current = 0
         self.tokens = tokens
         self.actual_scope = scope
@@ -44,7 +44,7 @@ class Parser:
                 # expressions with an operator '='
                 return Assignment(var_name, right, self.actual_scope.variables)
             raise Exception()  # if the operator is not '=', raise exception
-        # otherwise the equality expresion is returned
+        # otherwise the equality expression is returned
         return self.equality()
 
     def variable(self) -> bool:
@@ -53,7 +53,7 @@ class Parser:
         """
         if self.match(TokenType.LET):  # if the actual token is 'let'
             if self.match(TokenType.IDENTIFIER):  # and the next token is an identifier,
-                if self.actual_scope.declaration(self.previous()):  # then declare the variable
+                if self.actual_scope.declaration(self.previous().text):  # then declare the variable
                     return True  # if the variable is declared correctly, return true
                 raise Exception()  # else, raise exception
             raise Exception()  # if the next token is not an identifier, raise Exception
