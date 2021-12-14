@@ -5,7 +5,7 @@ from dataclasses import dataclass
 @dataclass
 class Type:
     name: str
-    parent: 'Type'
+    parent: Optional['Type']
 
 
 @dataclass
@@ -21,7 +21,7 @@ class Scope:
 
     def declaration(self, name: str) -> bool:
         if not self.exists_scoped_variable(name):
-            self.variables[name] = None
+            self.variables[name] = Object(None, Type("", None))
             return True
         return False
 

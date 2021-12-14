@@ -1,14 +1,18 @@
 from _parser.expression import Literal, Grouping, Unary, Binary, Expression
 from tokenizer import TokenType
+from .scope import Object
 
 
 class Interpreter:
 
-    def interpret(self, expression: Expression):
-        print(expression.eval(self))
+    def interpret(self, expressions: [Expression]):
+        for expression in expressions:
+            print(expression.eval(self))
 
     @staticmethod
     def eval_literal(literal: Literal):
+        if type(literal.value) == Object:
+            return literal.value.value
         return literal.value
 
     def eval_grouping(self, grouping: Grouping):

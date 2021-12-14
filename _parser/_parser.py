@@ -1,5 +1,9 @@
 """
-expression -> assignment
+program -> statement* EOF;
+
+statement -> expression
+
+expression -> assignment ";"
 assignment -> variable "=" equality | equality
 variable -> "let" IDENTIFIER | IDENTIFIER
 equality -> comparison ( ("!=" | "==") comparison)*
@@ -7,7 +11,7 @@ comparison -> term ( (">" | ">=" | "<" | "<=") term)*
 term ->  factor ( ( "-" | "+" ) factor)*
 factor -> unary ( ( "/" | "*" ) unary)*
 unary -> ( "!" | "-" ) unary | primary
-primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")"
+primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")" | IDENTIFIER
 """
 
 from tokenizer.token_ import Token, TokenType
@@ -24,13 +28,22 @@ class Parser:
         """
         Parses current Token list, and returns a syntax tree
         """
+        statements = []
+        while not self.is_at_end():
+            statements.append(self.statement())
+        return statements
+
+    def statement(self):
         return self.expression()
 
     def expression(self) -> Expression:
         """
         Solves expression production
         """
-        return self.assignment()
+        result = self.assignment()
+        if not self.match(TokenType.SEMICOLON):
+            raise Exception("; expected")
+        return result
 
     def assignment(self) -> Expression:
         """
@@ -99,7 +112,7 @@ class Parser:
         """
         Solves term production
         """
-        return self.binary(self.factor, TokenType.GREATER, TokenType.PLUS, TokenType.MINUS)
+        return self.binary(self.factor, TokenType.PLUS, TokenType.MINUS)
 
     def factor(self) -> Expression:
         """

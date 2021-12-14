@@ -45,9 +45,7 @@ if __name__ == '__main__':
     tokens = tokenizer.analyze(program)
 
     parser = Parser(tokens, global_scope)
-
-    while parser.current < len(tokens) - 1:
-        result = (parser.parse())
-        print(result)
-        interpreter = Interpreter()
-        interpreter.interpret(result)
+    result = (parser.parse())
+    print(result)
+    interpreter = Interpreter()
+    interpreter.interpret(result)

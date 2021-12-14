@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from abc import abstractmethod
-from tokenizer.token_ import Token
+from tokenizer.token_ import Token, TokenType
 
 
 class Expression:
@@ -21,7 +21,7 @@ class Assignment(Expression):
         Evaluates the node of the syntax tree by evaluating right expression and assign its value
         to the corresponding variable
         """
-        self.variables[self.var_name] = self.value.eval(interpreter)
+        self.variables[self.var_name].value = self.value.eval(interpreter)
         return self.variables[self.var_name]
 
     def __str__(self):
