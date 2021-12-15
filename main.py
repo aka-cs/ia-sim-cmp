@@ -46,6 +46,6 @@ if __name__ == '__main__':
 
     parser = Parser(tokens, global_scope)
     result = (parser.parse())
-    print(result)
+    # print(result)
     interpreter = Interpreter()
     interpreter.interpret(result)
