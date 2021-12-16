@@ -1,10 +1,14 @@
-from _parser.expression import Literal, Grouping, Unary, Binary, Expression
+from _parser.expression import Literal, Grouping, Unary, Binary, Expression, Variable, Assignment
+from _parser.statement import ExpressionStatement, VarDeclaration
 from tokenizer import TokenType
-from .scope import Object
+from .scope import Scope
 from .visitor import visitor
 
 
 class Interpreter:
+
+    def __init__(self):
+        self.scope = Scope()
 
     def interpret(self, expressions: [Expression]):
         for expression in expressions:
@@ -12,8 +16,6 @@ class Interpreter:
 
     @visitor(Literal)
     def eval(self, literal: Literal):
-        if type(literal.value) == Object:
-            return literal.value.value
         return literal.value
 
     @visitor(Grouping)
@@ -53,3 +55,28 @@ class Interpreter:
             return left > right
         if binary.operator.type == TokenType.GREATER_EQUAL:
             return left >= right
+
+    @visitor(Variable)
+    def eval(self, variable: Variable):
+        return self.scope.get(variable.name.text)
+
+    @visitor(VarDeclaration)
+    def eval(self, declaration: VarDeclaration):
+        self.scope.declare(declaration.name.text, declaration.expression.eval(self))
+
+    @visitor(Assignment)
+    def eval(self, assignment: Assignment):
+        self.scope.assign(assignment.var_name.text, assignment.value.eval(self))
+
+    @visitor(ExpressionStatement)
+    def eval(self, expression: ExpressionStatement):
+        return expression.expression.eval(self)
+
+    def execute_block(self, statements, scope: Scope):
+        previous = self.scope
+        try:
+            self.scope = scope
+            for statement in statements:
+                self.eval(statement)
+        finally:
+            self.scope = previous

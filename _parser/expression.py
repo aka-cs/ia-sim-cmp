@@ -1,27 +1,16 @@
 from dataclasses import dataclass
-from abc import abstractmethod
-from tokenizer.token_ import Token, TokenType
+from tokenizer.token_ import Token
 
 
 class Expression:
-
     def eval(self, interpreter):
         return interpreter.eval(self)
 
 
 @dataclass
 class Assignment(Expression):
-    var_name: str
+    var_name: Token
     value: Expression
-    variables: dict
-
-    def eval(self, interpreter):
-        """
-        Evaluates the node of the syntax tree by evaluating right expression and assign its value
-        to the corresponding variable
-        """
-        self.variables[self.var_name].value = self.value.eval(interpreter)
-        return self.variables[self.var_name]
 
     def __str__(self):
         return f"({self.var_name} = {self.value})"
@@ -76,3 +65,11 @@ class Literal(Expression):
 
     def __str__(self):
         return f"{self.value}"
+
+
+@dataclass
+class Variable(Expression):
+    name: Token
+
+    def __str__(self):
+        return f"{self.name}"

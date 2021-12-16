@@ -1,21 +1,28 @@
 """
-program -> statement* EOF;
+program -> declaration* EOF;
 
-statement -> expression
+block -> "{" declaration* "}"
 
-expression -> assignment ";"
-assignment -> variable "=" equality | equality
-variable -> "let" IDENTIFIER | IDENTIFIER
+declaration -> varDeclaration | statement
+varDeclaration -> "let" IDENTIFIER "=" expression
+
+statement -> expressionStatement
+
+expressionStatement -> expression ";"
+expression -> assignment
+assignment -> IDENTIFIER "=" equality | equality
 equality -> comparison ( ("!=" | "==") comparison)*
 comparison -> term ( (">" | ">=" | "<" | "<=") term)*
 term ->  factor ( ( "-" | "+" ) factor)*
 factor -> unary ( ( "/" | "*" ) unary)*
-unary -> ( "!" | "-" ) unary | primary
+unary -> ( "!" | "-" ) unary | call
+call -> primary ( "("  arguments? ")")?
 primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")" | IDENTIFIER
 """
 
 from tokenizer.token_ import Token, TokenType
-from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping
+from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Variable
+from .statement import ExpressionStatement, VarDeclaration
 
 
 class Parser:
@@ -30,35 +37,47 @@ class Parser:
         """
         statements = []
         while not self.is_at_end():
-            statements.append(self.statement())
+            statements.append(self.declaration())
         return statements
 
+    def declaration(self):
+        if self.match(TokenType.LET):
+            return self.var_declaration()
+        return self.statement()
+
+    def var_declaration(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
+        self.consume(TokenType.EQUAL, "Variable must be initialized")
+        expression = self.expression()
+        self.consume(TokenType.SEMICOLON, "; expected")
+        return VarDeclaration(name, expression)
+
     def statement(self):
-        return self.expression()
+        return self.expression_statement()
+
+    def expression_statement(self):
+        expression = self.expression()
+        self.consume(TokenType.SEMICOLON, "; expected")
+        return ExpressionStatement(expression)
 
     def expression(self) -> Expression:
         """
         Solves expression production
         """
-        result = self.assignment()
-        if not self.match(TokenType.SEMICOLON):
-            raise Exception("; expected")
-        return result
+        return self.assignment()
 
     def assignment(self) -> Expression:
         """
         Solves assignment production
         """
-        if self.variable():  # if the left expression is a declaration
-            var_name = self.previous().text  # save the variable name
-            if self.match(TokenType.EQUAL):  # if the next operator is '='
-                right = self.equality()  # builds the expression on the right
-                # builds a new assignment expression from joining left and right
-                # expressions with an operator '='
-                return Assignment(var_name, right, self.actual_scope.variables)
-            raise Exception()  # if the operator is not '=', raise exception
-        # otherwise the equality expression is returned
-        return self.equality()
+        expression = self.equality()
+        if self.match(TokenType.EQUAL):
+            equals = self.previous()
+            value = self.equality()
+            if type(expression) == Variable:
+                return Assignment(expression.name, value)
+            raise Exception("Invalid assignment")
+        return expression
 
     def variable(self) -> bool:
         """
@@ -149,19 +168,21 @@ class Parser:
         if self.match(TokenType.STRING):
             return Literal(self.previous().text)
         if self.match(TokenType.IDENTIFIER):
-            variable_value, variable_exists = self.actual_scope.obtain_value(self.previous().text)
-            if variable_exists:
-                return Literal(variable_value)
-            raise Exception()
-
+            return Variable(self.previous())
         if self.match(TokenType.LEFT_PARENTHESIS):
             # if it's a left parenthesis, produce the expression and check for right parenthesis
             expr = self.equality()
-            if not self.check(TokenType.RIGHT_PARENTHESIS):
-                raise Exception()
-            self.advance()
+            self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
             return Grouping(expr)
         raise Exception()
+
+    def block(self):
+        statements = []
+        while not self.is_at_end() and not self.check(TokenType.RIGHT_BRACKET):
+            statements.append(self.statement())
+
+        self.consume(TokenType.RIGHT_BRACKET, "'}' missing")
+        return statements
 
     def match(self, *types: [TokenType]):
         """
@@ -204,3 +225,8 @@ class Parser:
         Returns current token
         """
         return self.tokens[self.current]
+
+    def consume(self, token_type: TokenType, message: str):
+        if self.check(token_type):
+            return self.advance()
+        raise Exception(message)

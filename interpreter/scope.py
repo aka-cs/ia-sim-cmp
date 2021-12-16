@@ -1,37 +1,27 @@
 from typing import Optional
-from dataclasses import dataclass
-
-
-@dataclass
-class Type:
-    name: str
-    parent: Optional['Type']
-
-
-@dataclass
-class Object:
-    value: object
-    type: Type
 
 
 class Scope:
-    def __init__(self, father: Optional['Scope']):
-        self.variables: {str: Object} = {}
+    def __init__(self, father: Optional['Scope'] = None):
+        self.variables: {str: object} = {}
         self.father = father
 
-    def declaration(self, name: str) -> bool:
-        if not self.exists_scoped_variable(name):
-            self.variables[name] = Object(None, Type("", None))
-            return True
-        return False
+    def declare(self, name: str, value: object) -> None:
+        if name not in self.variables:
+            self.variables[name] = value
+        else:
+            raise Exception(f"Variable {name} already exists")
 
-    def obtain_value(self, name: str) -> (Object, bool):
+    def get(self, name: str) -> object:
         if name in self.variables:
-            return self.variables[name], True
-        return self.father.obtain_value(name) if self.father else None, False
+            return self.variables[name]
+        if self.father:
+            return self.father.get(name)
+        raise Exception(f"Variable {name} not defined")
 
-    def exists_scoped_variable(self, name) -> bool:
-        return name in self.variables
-
-    def exists_variable(self, name) -> bool:
-        return self.obtain_value(name)[1]
+    def assign(self, name: str, value: object):
+        if name in self.variables:
+            self.variables[name] = value
+        if self.father:
+            self.father.assign(name, value)
+        raise Exception(f"Variable {name} not defined")
