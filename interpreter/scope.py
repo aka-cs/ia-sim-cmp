@@ -22,6 +22,7 @@ class Scope:
     def assign(self, name: str, value: object):
         if name in self.variables:
             self.variables[name] = value
-        if self.father:
+        elif self.father:
             self.father.assign(name, value)
-        raise Exception(f"Variable {name} not defined")
+        else:
+            raise Exception(f"Variable {name} not defined")

@@ -23,6 +23,7 @@ if __name__ == '__main__':
         TokenMatcher(r'(null)[^\w]', TokenType.NULL),
         TokenMatcher(r'(true)[^\w]', TokenType.TRUE),
         TokenMatcher(r'(false)[^\w]', TokenType.FALSE),
+        TokenMatcher(r'(return)[^\w]', TokenType.RETURN),
         TokenMatcher(r'>=', TokenType.GREATER_EQUAL),
         TokenMatcher(r'<=', TokenType.LOWER_EQUAL),
         TokenMatcher(r'>', TokenType.GREATER),
@@ -41,10 +42,9 @@ if __name__ == '__main__':
     with open('test/program.txt', 'r') as file:
         program = file.read()
 
-    global_scope = Scope(None)
     tokens = tokenizer.analyze(program)
 
-    parser = Parser(tokens, global_scope)
+    parser = Parser(tokens)
     result = (parser.parse())
     # print(result)
     interpreter = Interpreter()

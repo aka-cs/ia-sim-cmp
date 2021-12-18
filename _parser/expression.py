@@ -56,6 +56,12 @@ class Grouping(Expression):
 
 
 @dataclass
+class Call(Expression):
+    called: Expression
+    arguments: [Expression]
+
+
+@dataclass
 class Literal(Expression):
     """
     Literal representation

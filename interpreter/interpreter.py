@@ -1,18 +1,22 @@
-from _parser.expression import Literal, Grouping, Unary, Binary, Expression, Variable, Assignment
-from _parser.statement import ExpressionStatement, VarDeclaration
+from _parser.expression import Literal, Grouping, Unary, Binary, Expression, Variable, Assignment, Call
+from _parser.statement import ExpressionStatement, VarDeclaration, Function, Return
 from tokenizer import TokenType
 from .scope import Scope
 from .visitor import visitor
+from .functions import builtin_print, UserDefinedFunction, ReturnCall
 
 
 class Interpreter:
 
     def __init__(self):
-        self.scope = Scope()
+        self.globals: Scope = Scope()
+        self.scope: Scope = self.globals
+
+        self.globals.declare("print", builtin_print)
 
     def interpret(self, expressions: [Expression]):
         for expression in expressions:
-            print(expression.eval(self))
+            expression.eval(self)
 
     @visitor(Literal)
     def eval(self, literal: Literal):
@@ -71,6 +75,27 @@ class Interpreter:
     @visitor(ExpressionStatement)
     def eval(self, expression: ExpressionStatement):
         return expression.expression.eval(self)
+
+    @visitor(Call)
+    def eval(self, expression: Call):
+        called = expression.called.eval(self)
+        arguments = []
+        if len(expression.arguments) != called.number_arguments:
+            raise Exception("Invalid number of arguments")
+        for arg in expression.arguments:
+            arguments.append(arg.eval(self))
+        return called(self, arguments)
+
+    @visitor(Function)
+    def eval(self, expression: Function):
+        self.scope.declare(expression.name.text, UserDefinedFunction(expression, len(expression.params)))
+
+    @visitor(Return)
+    def eval(self, expression: Return):
+        value = None
+        if expression.expression:
+            value = expression.expression.eval(self)
+        raise ReturnCall(value)
 
     def execute_block(self, statements, scope: Scope):
         previous = self.scope

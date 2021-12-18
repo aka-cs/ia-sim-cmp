@@ -17,3 +17,15 @@ class VarDeclaration(Statement):
 @dataclass
 class ExpressionStatement(Statement):
     expression: Expression
+
+
+@dataclass
+class Function(Statement):
+    name: Token
+    params: [Token]
+    body: [Expression]
+
+
+@dataclass
+class Return(Statement):
+    expression: Expression

@@ -3,10 +3,15 @@ program -> declaration* EOF;
 
 block -> "{" declaration* "}"
 
-declaration -> varDeclaration | statement
+declaration -> funDeclaration | varDeclaration | statement
 varDeclaration -> "let" IDENTIFIER "=" expression
 
-statement -> expressionStatement
+funDeclaration -> "fun" IDENTIFIER "(" parameters? ")" block
+parameters -> IDENTIFIER ( "," IDENTIFIER)*
+
+statement -> expressionStatement | returnStatement
+
+returnStatement -> "return" expression? ";"
 
 expressionStatement -> expression ";"
 expression -> assignment
@@ -18,18 +23,19 @@ factor -> unary ( ( "/" | "*" ) unary)*
 unary -> ( "!" | "-" ) unary | call
 call -> primary ( "("  arguments? ")")?
 primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")" | IDENTIFIER
+
+arguments -> expression ("," expression)*
 """
 
 from tokenizer.token_ import Token, TokenType
-from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Variable
-from .statement import ExpressionStatement, VarDeclaration
+from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Variable, Call
+from .statement import ExpressionStatement, VarDeclaration, Function, Return
 
 
 class Parser:
-    def __init__(self, tokens: [Token], scope):
+    def __init__(self, tokens: [Token]):
         self.current = 0
         self.tokens = tokens
-        self.actual_scope = scope
 
     def parse(self):
         """
@@ -43,6 +49,8 @@ class Parser:
     def declaration(self):
         if self.match(TokenType.LET):
             return self.var_declaration()
+        if self.match(TokenType.FUN):
+            return self.fun_declaration()
         return self.statement()
 
     def var_declaration(self):
@@ -52,8 +60,30 @@ class Parser:
         self.consume(TokenType.SEMICOLON, "; expected")
         return VarDeclaration(name, expression)
 
+    def fun_declaration(self):
+        name = self.consume(TokenType.IDENTIFIER, "Function name missing")
+        self.consume(TokenType.LEFT_PARENTHESIS, "( missing")
+        parameters = []
+        if not self.check(TokenType.RIGHT_PARENTHESIS):
+            while True:
+                parameters.append(self.consume(TokenType.IDENTIFIER, "Parameter missing"))
+                if not self.match(TokenType.COMMA):
+                    break
+        self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
+        self.consume(TokenType.LEFT_BRACKET, "{ missing")
+        return Function(name, parameters, self.block())
+
     def statement(self):
+        if self.match(TokenType.RETURN):
+            return self.return_statement()
         return self.expression_statement()
+
+    def return_statement(self):
+        value = None
+        if not self.check(TokenType.SEMICOLON):
+            value = self.expression()
+        self.consume(TokenType.SEMICOLON, "; expected")
+        return Return(value)
 
     def expression_statement(self):
         expression = self.expression()
@@ -78,24 +108,6 @@ class Parser:
                 return Assignment(expression.name, value)
             raise Exception("Invalid assignment")
         return expression
-
-    def variable(self) -> bool:
-        """
-        Solves variable production
-        """
-        if self.match(TokenType.LET):  # if the actual token is 'let'
-            if self.match(TokenType.IDENTIFIER):  # and the next token is an identifier,
-                if self.actual_scope.declaration(self.previous().text):  # then declare the variable
-                    return True  # if the variable is declared correctly, return true
-                raise Exception()  # else, raise exception
-            raise Exception()  # if the next token is not an identifier, raise Exception
-
-        if self.match(TokenType.IDENTIFIER):  # if the actual token is an identifier
-            if self.actual_scope.exists_variable(self.previous().text):  # check if it's a valid assignation
-                return True  # if it is, return True
-            raise Exception()  # else, raise exception
-
-        return False  # otherwise, return False
 
     def binary(self, expression, *types: [TokenType]) -> Binary:
         """
@@ -150,7 +162,20 @@ class Parser:
             right = self.unary()
             return Unary(operator, right)
         # if there's no unary expression check the primary production
-        return self.primary()
+        return self.call()
+
+    def call(self) -> Expression:
+        expression = self.primary()
+        if self.match(TokenType.LEFT_PARENTHESIS):
+            arguments = []
+            if not self.check(TokenType.RIGHT_PARENTHESIS):
+                while True:
+                    arguments.append(self.expression())
+                    if not self.match(TokenType.COMMA):
+                        break
+            self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
+            return Call(expression, arguments)
+        return expression
 
     def primary(self) -> Expression:
         """
@@ -179,7 +204,7 @@ class Parser:
     def block(self):
         statements = []
         while not self.is_at_end() and not self.check(TokenType.RIGHT_BRACKET):
-            statements.append(self.statement())
+            statements.append(self.declaration())
 
         self.consume(TokenType.RIGHT_BRACKET, "'}' missing")
         return statements

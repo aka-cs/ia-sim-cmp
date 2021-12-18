@@ -43,6 +43,7 @@ class TokenType(Enum):
     NULL = auto()
     TRUE = auto()
     FALSE = auto()
+    RETURN = auto()
 
     # End of File
     EOF = auto()
