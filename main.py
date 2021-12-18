@@ -15,7 +15,7 @@ if __name__ == '__main__':
         TokenMatcher(r'\)', TokenType.RIGHT_PARENTHESIS),
         TokenMatcher(r'\{', TokenType.LEFT_BRACKET),
         TokenMatcher(r'\}', TokenType.RIGHT_BRACKET),
-        TokenMatcher(r'(let) ', TokenType.LET),
+        TokenMatcher(r'(var) ', TokenType.VAR),
         TokenMatcher(r'(fun) ', TokenType.FUN),
         TokenMatcher(r'(if)[^\w]', TokenType.IF),
         TokenMatcher(r'(else)[^\w]', TokenType.ELSE),
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     tokenizer = Tokenizer(matches)
 
-    with open('test/program.txt', 'r') as file:
+    with open('test/program.kt', 'r') as file:
         program = file.read()
 
     tokens = tokenizer.analyze(program)

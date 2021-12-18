@@ -47,7 +47,7 @@ class Parser:
         return statements
 
     def declaration(self):
-        if self.match(TokenType.LET):
+        if self.match(TokenType.VAR):
             return self.var_declaration()
         if self.match(TokenType.FUN):
             return self.fun_declaration()

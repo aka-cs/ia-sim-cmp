@@ -32,7 +32,7 @@ class TokenType(Enum):
     IDENTIFIER = auto()
 
     # keywords
-    LET = auto()
+    VAR = auto()
     FUN = auto()
     VEHICLE = auto()
     CARGO = auto()
