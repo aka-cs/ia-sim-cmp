@@ -3,7 +3,7 @@ program -> declaration* EOF;
 
 block -> "{" declaration* "}"
 
-declaration -> funDeclaration | varDeclaration | statement
+declaration := funDeclaration | varDeclaration | statement, lambda x,y: DeclarationNode(x, y)
 varDeclaration -> "let" IDENTIFIER "=" expression
 
 funDeclaration -> "fun" IDENTIFIER "(" parameters? ")" block

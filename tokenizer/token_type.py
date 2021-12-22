@@ -11,6 +11,7 @@ class TokenType(Enum):
     DOT = auto()
     SEMICOLON = auto()
     LINEBREAK = auto()
+    SPACE = auto()
     PLUS = auto()
     MINUS = auto()
     MULTIPLY = auto()

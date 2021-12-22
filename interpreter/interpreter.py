@@ -1,6 +1,6 @@
 from _parser.expression import Literal, Grouping, Unary, Binary, Expression, Variable, Assignment, Call
 from _parser.statement import ExpressionStatement, VarDeclaration, Function, Return
-from tokenizer import TokenType
+from tokenizer.token_type import TokenType
 from .scope import Scope
 from .visitor import visitor
 from .functions import builtin_print, UserDefinedFunction, ReturnCall
