@@ -29,7 +29,7 @@ def get_local_firsts(firsts: Dict[Symbol | Sentence, MySet[Terminal]], alpha: Se
         firsts_alpha.contains_epsilon = True
     else:
         for x in alpha.symbols:
-            firsts_alpha.hard_update(firsts[x])
+            firsts_alpha.update(firsts[x])
             
             if not firsts[x].contains_epsilon:
                 break

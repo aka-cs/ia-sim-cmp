@@ -96,7 +96,7 @@ class NonTerminal(Symbol):
 class Sentence:
     
     def __init__(self, *symbols: Symbol):
-        self.symbols = symbols
+        self.symbols = tuple(symbol for symbol in symbols if not symbol.IsEpsilon)
     
     def __add__(self, other: Union[Symbol, "Sentence"]):
         if isinstance(other, Sentence):
@@ -114,7 +114,7 @@ class Sentence:
     
     @property
     def IsEpsilon(self):
-        return any(s.IsEpsilon for s in self.symbols)
+        return all(s.IsEpsilon for s in self.symbols)
     
     def __repr__(self):
         return ' '.join(map(repr, self.symbols))
