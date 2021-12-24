@@ -6,7 +6,7 @@ from lr_parser.lr_utils import evaluate_reverse_parser
 from tools.decorators import only_once
 from regex.regex_ast import ConcatNode, UnionNode, StarNode, SymbolNode, MaybeNode, NumberNode, \
     NumberAndLetterNode, LetterNode, PlusNode, RangeNode, SymbolInBracketsNode, ConcatInBracketsNode, BracketNode, \
-    BracketComplimentNode
+    BracketComplimentNode, EpsilonNode
 
 
 @only_once
@@ -16,10 +16,11 @@ def RegParser():
         CreateTerminals(r'symbol | * ( ) ? \d \l \w + [ ] - ^'.split())
     E: NonTerminal
     non_terminals = E, A, S, B, G, F, V, K = CreateNonTerminals('E A S B G F V K'.split())
+    e = Epsilon()
     
     RegGrammar = Grammar(non_terminals, terminals, E, [
-        E > (E + pipe + A | A,
-             lambda x: UnionNode(x[0], x[2]), lambda x: x[0]),
+        E > (E + pipe + A | A | e,
+             lambda x: UnionNode(x[0], x[2]), lambda x: x[0], lambda x: EpsilonNode()),
         A > (A + S | S,
              lambda x: ConcatNode(x[0], x[1]), lambda x: x[0]),
         S > (B + star | B + plus | B + maybe | B,

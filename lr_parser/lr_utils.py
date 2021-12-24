@@ -180,9 +180,12 @@ def evaluate_reverse_parser(right_parse, operations, tokens):
             stack.append(token)
         if operation == Action.REDUCE:
             production: AttributedProduction = next(right_parse)
-            synthesize = stack[-len(production.Right):]
+            synthesize = []
+            for i in range(len(production.Right)):
+                synthesize.append(stack.pop())
+            synthesize.reverse()
             value = production.attribute(synthesize)
-            stack[-len(production.Right):] = [value]
+            stack.append(value)
             
     assert len(stack) == 1
     
