@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable
-from _parser.statement import Function
+from _parser.nodes import Function
 from .scope import Scope
 
 

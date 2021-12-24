@@ -12,8 +12,7 @@ if __name__ == '__main__':
 
     tokens = tokenizer.tokenize(program)
 
-    parser = Parser(tokens)
-    result = (parser.parse())
-    # print(result)
+    ast = Parser().parse(tokens)
     interpreter = Interpreter()
-    interpreter.interpret(result)
+
+    interpreter.interpret(ast)

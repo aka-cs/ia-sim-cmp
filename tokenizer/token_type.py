@@ -21,8 +21,8 @@ class TokenType(Enum):
     # one or two characters
     GREATER = auto()
     GREATER_EQUAL = auto()
-    LOWER = auto()
-    LOWER_EQUAL = auto()
+    LESS = auto()
+    LESS_EQUAL = auto()
     EQUAL = auto()
     EQUAL_EQUAL = auto()
     EQUAL_DIFFERENT = auto()
@@ -45,6 +45,8 @@ class TokenType(Enum):
     TRUE = auto()
     FALSE = auto()
     RETURN = auto()
+    AND = auto()
+    OR = auto()
 
     # End of File
     EOF = auto()

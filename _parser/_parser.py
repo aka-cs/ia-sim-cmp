@@ -1,257 +1,134 @@
-"""
-program -> declaration* EOF;
-
-block -> "{" declaration* "}"
-
-declaration := funDeclaration | varDeclaration | statement, lambda x,y: DeclarationNode(x, y)
-varDeclaration -> "let" IDENTIFIER "=" expression
-
-funDeclaration -> "fun" IDENTIFIER "(" parameters? ")" block
-parameters -> IDENTIFIER ( "," IDENTIFIER)*
-
-statement -> expressionStatement | returnStatement
-
-returnStatement -> "return" expression? ";"
-
-expressionStatement -> expression ";"
-expression -> assignment
-assignment -> IDENTIFIER "=" equality | equality
-equality -> comparison ( ("!=" | "==") comparison)*
-comparison -> term ( (">" | ">=" | "<" | "<=") term)*
-term ->  factor ( ( "-" | "+" ) factor)*
-factor -> unary ( ( "/" | "*" ) unary)*
-unary -> ( "!" | "-" ) unary | call
-call -> primary ( "("  arguments? ")")?
-primary -> NUMBER | STRING | "true" | "false" | "null" | "(" equality ")" | IDENTIFIER
-
-arguments -> expression ("," expression)*
-"""
-
+from lr_parser.lr1_parser import LR1Parser
+from lr_parser.grammar import Grammar, CreateTerminals, CreateNonTerminals, Terminal
+from lr_parser.lr_utils import evaluate_reverse_parser
+from .nodes import *
 from tokenizer.token_ import Token, TokenType
-from .expression import Expression, Assignment, Binary, Unary, Literal, Grouping, Variable, Call
-from .statement import ExpressionStatement, VarDeclaration, Function, Return
 
 
 class Parser:
-    def __init__(self, tokens: [Token]):
-        self.current = 0
-        self.tokens = tokens
 
-    def parse(self):
-        """
-        Parses current Token list, and returns a syntax tree
-        """
-        statements = []
-        while not self.is_at_end():
-            statements.append(self.declaration())
-        return statements
+    def __init__(self):
+        symbol = Terminal("symbol")
+        operators = equals, plus, minus, mul, div, exclamation = CreateTerminals("= + - * / !".split())
+        comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
+            "== != > >= < <=".split())
+        logic = and_operator, or_operator = CreateTerminals("and or".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s = CreateTerminals("if else while fun var return".split())
+        specials = number, identifier, string = CreateTerminals("number identifier string".split())
+        grouping = left_p, right_p, left_b, right_b = CreateTerminals("( ) { }".split())
+        punctuation = comma, dot, semicolon = CreateTerminals(", . ;".split())
 
-    def declaration(self):
-        if self.match(TokenType.VAR):
-            return self.var_declaration()
-        if self.match(TokenType.FUN):
-            return self.fun_declaration()
-        return self.statement()
+        terminals = [symbol, *operators, *comparison, *logic, *statements, *specials, *grouping, *punctuation]
 
-    def var_declaration(self):
-        name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
-        self.consume(TokenType.EQUAL, "Variable must be initialized")
-        expression = self.expression()
-        self.consume(TokenType.SEMICOLON, "; expected")
-        return VarDeclaration(name, expression)
+        non_terminals \
+            = p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg,\
+            p_params, p_more_params, p_var_declaration, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
+            p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
+            p_factor, p_factor_op, p_unary, p_unary_op, p_call, p_arguments, p_more_arguments, p_primary \
+            = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
+                                 "Params MoreParams VarDeclaration Assign ExpressionS Expression Logic Logic_op "
+                                 "Equality Equality_op Comparison Comparison_op Term Term_op "
+                                 "Factor Factor_op Unary Unary_op Call Arguments MoreArguments Primary".split())
 
-    def fun_declaration(self):
-        name = self.consume(TokenType.IDENTIFIER, "Function name missing")
-        self.consume(TokenType.LEFT_PARENTHESIS, "( missing")
-        parameters = []
-        if not self.check(TokenType.RIGHT_PARENTHESIS):
-            while True:
-                parameters.append(self.consume(TokenType.IDENTIFIER, "Parameter missing"))
-                if not self.match(TokenType.COMMA):
-                    break
-        self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
-        self.consume(TokenType.LEFT_BRACKET, "{ missing")
-        return Function(name, parameters, self.block())
+        productions = [
+            p_statements > (p_statements + p_statement | p_statement, lambda x: [*x[0], x[1]], lambda x: [x[0]]),
+            p_statement > (p_if | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s,
+                           lambda x: x[0],
+                           lambda x: x[0],
+                           lambda x: x[0],
+                           lambda x: x[0],
+                           lambda x: x[0],
+                           lambda x: x[0]),
 
-    def statement(self):
-        if self.match(TokenType.RETURN):
-            return self.return_statement()
-        return self.expression_statement()
+            p_if > (if_s + left_p + p_expression + right_p + left_b + p_statements + p_else,
+                    lambda x: If(x[2], x[5], x[6])),
+            p_else > (right_b + else_s + left_b + p_statements + right_b | right_b,
+                      lambda x: x[3],
+                      lambda x: []),
 
-    def return_statement(self):
-        value = None
-        if not self.check(TokenType.SEMICOLON):
-            value = self.expression()
-        self.consume(TokenType.SEMICOLON, "; expected")
-        return Return(value)
+            p_var_declaration > (var_s + identifier + equals + p_equality + semicolon, lambda x: VarDeclaration(x[1], x[3])),
+            p_assign > (identifier + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
+            p_fun_declaration > (fun_s + identifier + left_p + p_params + left_b + p_statements + right_b,
+                                 lambda x: Function(x[1], x[3], x[5])),
 
-    def expression_statement(self):
-        expression = self.expression()
-        self.consume(TokenType.SEMICOLON, "; expected")
-        return ExpressionStatement(expression)
+            p_params > (identifier + p_more_params | right_p, lambda x: [x[0], *x[1]], lambda x: []),
+            p_more_params > (comma + identifier + p_more_params | right_p, lambda x: [x[1], *x[2]], lambda x: []),
 
-    def expression(self) -> Expression:
-        """
-        Solves expression production
-        """
-        return self.assignment()
+            p_return > (return_s + p_return_arg, lambda x: Return(x[1])),
+            p_return_arg > (p_expression + semicolon | semicolon, lambda x: x[0], lambda x: []),
 
-    def assignment(self) -> Expression:
-        """
-        Solves assignment production
-        """
-        expression = self.equality()
-        if self.match(TokenType.EQUAL):
-            equals = self.previous()
-            value = self.equality()
-            if type(expression) == Variable:
-                return Assignment(expression.name, value)
-            raise Exception("Invalid assignment")
-        return expression
+            p_expression_s > (p_expression + semicolon, lambda x: x[0]),
+            p_expression > (p_logic, lambda x: x[0]),
+            p_logic > (p_logic + p_logic_op + p_equality | p_equality, lambda x: Binary(*x), lambda x: x[0]),
+            p_equality > (p_equality + p_equality_op + p_comparison | p_comparison, lambda x: Binary(*x), lambda x: x[0]),
+            p_comparison > (p_comparison + p_comparison_op + p_term | p_term, lambda x: Binary(*x), lambda x: x[0]),
+            p_term > (p_term + p_term_op + p_factor | p_factor, lambda x: Binary(*x), lambda x: x[0]),
+            p_factor > (p_factor + p_factor_op + p_unary | p_unary, lambda x: Binary(*x), lambda x: x[0]),
+            p_unary > (p_unary_op + p_unary | p_call, lambda x: Unary(*x), lambda x: x[0]),
+            p_call > (p_primary | p_primary + left_p + p_arguments, lambda x: x[0], lambda x: Call(x[0], x[2])),
+            p_primary > (number | string | identifier | left_p + p_logic + right_p,
+                         lambda x: Literal(float(x[0].text)),
+                         lambda x: Literal(x[0].text),
+                         lambda x: Variable(x[0]),
+                         lambda x: x[1]),
 
-    def binary(self, expression, *types: [TokenType]) -> Binary:
-        """
-        Auxiliary method for building binary expressions
-        :param expression: expression builder for left and right expressions
-        :param types: list of expected TokenTypes for operands
-        :return:
-        """
-        expr = expression()  # builds the expression on the left
-        while self.match(*types):
-            # while an operator is found, consume the operator and solve the expression on the right
-            operator = self.previous()
-            right = expression()
-            # builds a new binary expression from joining left and right expressions with an operator
-            expr = Binary(expr, operator, right)
-        # if a binary operator isn't found an expression to parse is returned
-        # otherwise the binary expression is returned
-        return expr
+            p_arguments > (p_expression + p_more_arguments | right_p, lambda x: [x[0], *x[1]], lambda x: []),
+            p_more_arguments > (comma + p_expression + p_more_arguments | right_p, lambda x: [x[1], *x[2]], lambda x: []),
 
-    def equality(self) -> Expression:
-        """
-        Solves equality production
-        """
-        return self.binary(self.comparison, TokenType.EQUAL_EQUAL, TokenType.EQUAL_DIFFERENT)
+            p_logic_op > (and_operator | or_operator, lambda x: x[0], lambda x: x[0]),
+            p_equality_op > (equals_equals | different, lambda x: x[0], lambda x: x[0]),
+            p_comparison_op > (greater | greaterequal | less | lessequal,
+                               lambda x: x[0], lambda x: x[0], lambda x: x[0], lambda x: x[0]),
+            p_term_op > (plus | minus, lambda x: x[0], lambda x: x[0]),
+            p_factor_op > (mul | div, lambda x: x[0], lambda x: x[0]),
+            p_unary_op > (exclamation | minus, lambda x: x[0], lambda x: x[0])
+        ]
 
-    def comparison(self) -> Expression:
-        """
-        Solves comparison production
-        """
-        return self.binary(self.term, TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LOWER_EQUAL, TokenType.LOWER)
+        grammar = Grammar(non_terminals, terminals, p_statements, productions)
 
-    def term(self) -> Expression:
-        """
-        Solves term production
-        """
-        return self.binary(self.factor, TokenType.PLUS, TokenType.MINUS)
+        self.parser = LR1Parser(grammar)
+        self.mapping = {
+            TokenType.IDENTIFIER: identifier,
+            TokenType.NUMBER: number,
+            TokenType.STRING: string,
+            TokenType.EQUAL: equals,
+            TokenType.EQUAL_EQUAL: equals_equals,
+            TokenType.EQUAL_DIFFERENT: different,
+            TokenType.GREATER: greater,
+            TokenType.GREATER_EQUAL: greaterequal,
+            TokenType.LESS: less,
+            TokenType.LESS_EQUAL: lessequal,
+            TokenType.IF: if_s,
+            TokenType.ELSE: else_s,
+            TokenType.WHILE: while_s,
+            TokenType.FUN: fun_s,
+            TokenType.RETURN: return_s,
+            TokenType.VAR: var_s,
+            TokenType.LEFT_PARENTHESIS: left_p,
+            TokenType.RIGHT_PARENTHESIS: right_p,
+            TokenType.LEFT_BRACKET: left_b,
+            TokenType.RIGHT_BRACKET: right_b,
+            TokenType.AND: and_operator,
+            TokenType.OR: or_operator,
+            TokenType.PLUS: plus,
+            TokenType.MINUS: minus,
+            TokenType.MULTIPLY: mul,
+            TokenType.DIVIDE: div,
+            TokenType.EXCLAMATION: exclamation,
+            TokenType.COMMA: comma,
+            TokenType.DOT: dot,
+            TokenType.SEMICOLON: semicolon,
+            TokenType.EOF: self.parser.G.EOF
+        }
 
-    def factor(self) -> Expression:
-        """
-        Solves factor production
-        """
-        return self.binary(self.unary, TokenType.MULTIPLY, TokenType.DIVIDE)
+    def _map_tokens_to_terminals(self, tokens: [Token]):
+        mapped_tokens = []
+        for token in tokens:
+            mapped_tokens.append(self.mapping.get(token.type, self.parser.G.Terminals[0]))
+        return mapped_tokens
 
-    def unary(self) -> Expression:
-        """
-        Solves unary production
-        """
-        # checks if current token is an unary operator
-        if self.match(TokenType.EXCLAMATION, TokenType.MINUS):
-            operator = self.previous()
-            # right member is treated as a unary expression to allow nesting (example: !!false)
-            right = self.unary()
-            return Unary(operator, right)
-        # if there's no unary expression check the primary production
-        return self.call()
-
-    def call(self) -> Expression:
-        expression = self.primary()
-        if self.match(TokenType.LEFT_PARENTHESIS):
-            arguments = []
-            if not self.check(TokenType.RIGHT_PARENTHESIS):
-                while True:
-                    arguments.append(self.expression())
-                    if not self.match(TokenType.COMMA):
-                        break
-            self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
-            return Call(expression, arguments)
-        return expression
-
-    def primary(self) -> Expression:
-        """
-        Solves primary production
-        """
-        # check if token is false, true, null a string or a number and return a literal with the value
-        if self.match(TokenType.FALSE):
-            return Literal(False)
-        if self.match(TokenType.TRUE):
-            return Literal(True)
-        if self.match(TokenType.NULL):
-            return Literal(None)
-        if self.match(TokenType.NUMBER):
-            return Literal(float(self.previous().text))
-        if self.match(TokenType.STRING):
-            return Literal(self.previous().text)
-        if self.match(TokenType.IDENTIFIER):
-            return Variable(self.previous())
-        if self.match(TokenType.LEFT_PARENTHESIS):
-            # if it's a left parenthesis, produce the expression and check for right parenthesis
-            expr = self.equality()
-            self.consume(TokenType.RIGHT_PARENTHESIS, ") missing")
-            return Grouping(expr)
-        raise Exception()
-
-    def block(self):
-        statements = []
-        while not self.is_at_end() and not self.check(TokenType.RIGHT_BRACKET):
-            statements.append(self.declaration())
-
-        self.consume(TokenType.RIGHT_BRACKET, "'}' missing")
-        return statements
-
-    def match(self, *types: [TokenType]):
-        """
-        Checks if current token type is in types
-        If the token match is found, the token gets consumed
-        """
-        for token_type in types:
-            if self.check(token_type):
-                self.advance()
-                return True
-        return False
-
-    def previous(self) -> Token:
-        """
-        Returns the previous token
-        """
-        return self.tokens[self.current - 1]
-
-    def advance(self) -> Token:
-        """
-        Consumes a token and returns it
-        """
-        self.current += 1
-        return self.previous()
-
-    def check(self, token_type: TokenType) -> bool:
-        """
-        Checks if current token is of a certain type
-        """
-        return not self.is_at_end() and self.peek().type == token_type
-
-    def is_at_end(self) -> bool:
-        """
-        Returns true if all tokens have been parsed, false otherwise
-        """
-        return self.peek().type == TokenType.EOF
-
-    def peek(self) -> Token:
-        """
-        Returns current token
-        """
-        return self.tokens[self.current]
-
-    def consume(self, token_type: TokenType, message: str):
-        if self.check(token_type):
-            return self.advance()
-        raise Exception(message)
+    def parse(self, tokens: [Token]):
+        mapped_tokens = self._map_tokens_to_terminals(tokens)
+        parsed, operations = self.parser(mapped_tokens)
+        ast = evaluate_reverse_parser(parsed, operations, tokens + [self.parser.G.EOF])
+        return ast

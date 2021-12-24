@@ -1,5 +1,4 @@
-from _parser.expression import Literal, Grouping, Unary, Binary, Expression, Variable, Assignment, Call
-from _parser.statement import ExpressionStatement, VarDeclaration, Function, Return
+from _parser.nodes import *
 from tokenizer.token_type import TokenType
 from .scope import Scope
 from .visitor import visitor
@@ -51,14 +50,18 @@ class Interpreter:
             return left == right
         if binary.operator.type == TokenType.EQUAL_DIFFERENT:
             return left != right
-        if binary.operator.type == TokenType.LOWER:
+        if binary.operator.type == TokenType.LESS:
             return left < right
-        if binary.operator.type == TokenType.LOWER_EQUAL:
+        if binary.operator.type == TokenType.LESS_EQUAL:
             return left <= right
         if binary.operator.type == TokenType.GREATER:
             return left > right
         if binary.operator.type == TokenType.GREATER_EQUAL:
             return left >= right
+        if binary.operator.type == TokenType.AND:
+            return left and right
+        if binary.operator.type == TokenType.OR:
+            return left or right
 
     @visitor(Variable)
     def eval(self, variable: Variable):
@@ -96,6 +99,13 @@ class Interpreter:
         if expression.expression:
             value = expression.expression.eval(self)
         raise ReturnCall(value)
+
+    @visitor(If)
+    def eval(self, expression: If):
+        if expression.condition.eval(self):
+            self.execute_block(expression.code, Scope(self.scope))
+        else:
+            self.execute_block(expression.else_code, Scope(self.scope))
 
     def execute_block(self, statements, scope: Scope):
         previous = self.scope
