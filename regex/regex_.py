@@ -5,15 +5,17 @@ from lr_parser.grammar import Grammar, NonTerminal, Terminal, CreateTerminals, C
 from lr_parser.lr_utils import evaluate_reverse_parser
 from tools.decorators import only_once
 from regex.regex_ast import ConcatNode, UnionNode, StarNode, SymbolNode, MaybeNode, NumberNode, \
-    NumberAndLetterNode, LetterNode, PlusNode
+    NumberAndLetterNode, LetterNode, PlusNode, RangeNode, SymbolInBracketsNode, ConcatInBracketsNode, BracketNode, \
+    BracketComplimentNode
 
 
 @only_once
 def RegParser():
-    terminals = symbol, pipe, star, opar, cpar, maybe, number, letter, alphanum, plus = CreateTerminals(
-        r'symbol | * ( ) ? \d \l \w +'.split())
+    terminals = symbol, pipe, star, o_par, c_par, maybe, number, letter, alphanum, plus,\
+        o_bracket, c_bracket, minus, compliment =\
+        CreateTerminals(r'symbol | * ( ) ? \d \l \w + [ ] - ^'.split())
     E: NonTerminal
-    non_terminals = E, A, S, B = CreateNonTerminals('E A S B'.split())
+    non_terminals = E, A, S, B, G, F, V, K = CreateNonTerminals('E A S B G F V K'.split())
     
     RegGrammar = Grammar(non_terminals, terminals, E, [
         E > (E + pipe + A | A,
@@ -23,9 +25,17 @@ def RegParser():
         S > (B + star | B + plus | B + maybe | B,
              lambda x: StarNode(x[0]), lambda x: PlusNode(x[0]),
              lambda x: MaybeNode(x[0]), lambda x: x[0]),
-        B > (symbol | opar + E + cpar | number | letter | alphanum,
-             lambda x: SymbolNode(x[0]), lambda x: x[1], lambda x: NumberNode(),
-             lambda x: LetterNode(), lambda x: NumberAndLetterNode())
+        B > (symbol | o_par + E + c_par | o_bracket + G + c_bracket | number | letter | alphanum,
+             lambda x: SymbolNode(x[0]), lambda x: x[1], lambda x: x[1], lambda x: NumberNode(),
+             lambda x: LetterNode(), lambda x: NumberAndLetterNode()),
+        G > (compliment + F | F,
+             lambda x: BracketComplimentNode(x[1]), lambda x: BracketNode(x[0])),
+        F > (F + V | V,
+             lambda x: ConcatInBracketsNode(x[0], x[1]), lambda x: x[0]),
+        V > (V + minus + K | K,
+             lambda x: RangeNode(x[0], x[2]), lambda x: x[0]),
+        K > (symbol,
+             lambda x: SymbolInBracketsNode(x[0]))
     ])
     
     return LR1Parser(RegGrammar)
@@ -46,12 +56,20 @@ def _tokenize(regex: str):
 
 def _map_to_regex(tokens: List[str], non_terminals: List[Terminal], default: Terminal):
     mapped_tokens = []
+    brackets = False
     for x in tokens:
         matched = False
         for non_terminal in non_terminals:
-            if non_terminal.Name == x:
+            if not brackets and x not in '^-' and non_terminal.Name == x:
                 matched = True
                 mapped_tokens.append(non_terminal)
+                if x == '[':
+                    brackets = True
+            elif brackets and x in '^-]' and non_terminal.Name == x:
+                matched = True
+                mapped_tokens.append(non_terminal)
+                if x == ']':
+                    brackets = False
         if not matched:
             mapped_tokens.append(default)
     return mapped_tokens

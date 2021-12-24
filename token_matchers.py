@@ -3,7 +3,7 @@ from tokenizer.token_type import TokenType
 
 matches = [
     TokenMatcher(r'-?\d+(.\d+)?', TokenType.NUMBER),
-    # TokenMatcher(r'""', TokenType.STRING), # Regex is not prepared for strings yet
+    TokenMatcher(r'"([^"]|\\")*[^\\]?"', TokenType.STRING),  # Regex is not prepared for strings yet
     TokenMatcher(r'\+', TokenType.PLUS),
     TokenMatcher(r'\-', TokenType.MINUS),
     TokenMatcher(r'\*', TokenType.MULTIPLY),
@@ -29,7 +29,7 @@ matches = [
     TokenMatcher(r'<', TokenType.LESS),
     TokenMatcher(r'==', TokenType.EQUAL_EQUAL),
     TokenMatcher(r'=', TokenType.EQUAL),
-    TokenMatcher(r'(\l|_)+(\w|_)*', TokenType.IDENTIFIER),
+    TokenMatcher(r'[a-zA-Z_]+(\w|_)*', TokenType.IDENTIFIER),
     TokenMatcher(r'\.', TokenType.DOT),
     TokenMatcher(r',', TokenType.COMMA),
     TokenMatcher(r';', TokenType.SEMICOLON),

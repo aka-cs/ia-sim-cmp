@@ -25,6 +25,11 @@ class Symbol:
     def __hash__(self):
         return hash(self.Name)
     
+    def __eq__(self, other):
+        if isinstance(other, Symbol):
+            return self.Name == other.Name
+        return False
+    
     @property
     def IsEpsilon(self):
         return False
@@ -75,6 +80,14 @@ class NonTerminal(Symbol):
         self.productions += productions
         return productions
     
+    def __hash__(self):
+        return hash(self.Name)
+    
+    def __eq__(self, other):
+        if isinstance(other, NonTerminal):
+            return super(NonTerminal, self).__eq__(other)
+        return False
+    
     @property
     def IsNonTerminal(self):
         return True
@@ -101,7 +114,7 @@ class Sentence:
     
     @property
     def IsEpsilon(self):
-        return all(s.IsEpsilon for s in self.symbols)
+        return any(s.IsEpsilon for s in self.symbols)
     
     def __repr__(self):
         return ' '.join(map(repr, self.symbols))
@@ -234,9 +247,9 @@ class Grammar:
         else:
             self.Productions = productions + self.Productions
     
-    def AugmentedGrammar(self):
+    def AugmentedGrammar(self, force=False):
         
-        if self.IsAugmentedGrammar:
+        if self.IsAugmentedGrammar and not force:
             return self.copy()
         
         g = self.copy()

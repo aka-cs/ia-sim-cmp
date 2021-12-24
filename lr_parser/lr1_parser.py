@@ -6,7 +6,7 @@ from lr_parser.shift_reduce_parser import ShiftReduceParser, Action
 class LR1Parser(ShiftReduceParser):
     
     def _build_parsing_table(self):
-        G = self.G.AugmentedGrammar()
+        G = self.G.AugmentedGrammar(True)
         
         automata = build_lr1_automata(G)
         

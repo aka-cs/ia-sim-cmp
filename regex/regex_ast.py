@@ -1,7 +1,10 @@
+import string
+from typing import List
+
 from ast_.ast_abstract import AtomicNode, UnaryNode, BinaryNode
 from automata.automata import Automata
 from regex.automata_creation import epsilon_automata, simple_automata, LetterAutomata, NumberAutomata, \
-    NumberAndLetterAutomata
+    NumberAndLetterAutomata, join_automatas
 
 
 class EpsilonNode(AtomicNode):
@@ -76,3 +79,41 @@ class ConcatNode(BinaryNode):
         return left_value.concat(right_value)
 
 
+class BracketNode(UnaryNode):
+    
+    def operate(self, value):
+        if not isinstance(value, list):
+            value = [value]
+        return join_automatas(*[simple_automata(chr(x), []) for x in value])
+
+
+class BracketComplimentNode(UnaryNode):
+    
+    def operate(self, value):
+        if not isinstance(value, list):
+            value = [value]
+        value = list(map(chr, value))
+        value = [x for x in string.printable if x not in value]
+        return join_automatas(*[simple_automata(x, []) for x in value])
+        
+
+class SymbolInBracketsNode(AtomicNode):
+    
+    def evaluate(self):
+        return ord(self.token)
+
+
+class ConcatInBracketsNode(BinaryNode):
+    
+    def operate(self, left_value, right_value):
+        if not isinstance(left_value, list):
+            left_value = [left_value]
+        if not isinstance(right_value, list):
+            right_value = [right_value]
+        return left_value + right_value
+
+
+class RangeNode(BinaryNode):
+    
+    def operate(self, left_value: chr, right_value: chr):
+        return [x for x in range(left_value, right_value + 1)]

@@ -83,7 +83,6 @@ class Automata:
         
         return Automata(self.states, transitions, finals, self.initial_state, dict(self.states_info))
         
-    
     def get_info(self, state):
         return self.states_info.get(state, Info(None)).info
     
@@ -117,7 +116,7 @@ class Automata:
         start.tags = set()
         for tags in (self.final_states.get(s) for s in start if s in self.final_states):
             start.tags.update(tags)
-        start.info = list(it.chain(*[self.states_info.get(s, []) for s in start]))
+        start.info = Info(list(set(it.chain(*[self.states_info.get(s, Info([])).info for s in start]))))
         
         states = [start]
         pending = [start]
@@ -135,7 +134,7 @@ class Automata:
                     q.tags = set()
                     for tags in (self.final_states.get(s) for s in q if s in self.final_states):
                         q.tags.update(tags)
-                    q.info = set(it.chain(*[self.states_info.get(s, []) for s in q]))
+                    q.info = Info(list(set(it.chain(*[self.states_info.get(s, Info([])).info for s in q]))))
                     states.append(q)
                     pending.append(q)
                 else:
