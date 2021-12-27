@@ -10,6 +10,7 @@ class TokenType(Enum):
     COMMA = auto()
     DOT = auto()
     SEMICOLON = auto()
+    COLON = auto()
     LINEBREAK = auto()
     SPACE = auto()
     PLUS = auto()

@@ -2,115 +2,87 @@ from dataclasses import dataclass
 from tokenizer.token_ import Token
 
 
-class Expression:
+class Node:
     def eval(self, interpreter):
         return interpreter.eval(self)
 
+    def check(self, checker):
+        return checker.check(self)
+
 
 @dataclass
-class Assignment(Expression):
+class Assignment(Node):
     var_name: Token
-    value: Expression
-
-    def __str__(self):
-        return f"({self.var_name} = {self.value})"
+    value: Node
 
 
 @dataclass
-class Binary(Expression):
-    """
-    Binary expression representation
-    Every binary operation has a left expression, an operand and a right expression
-    """
-    left: Expression
+class Binary(Node):
+    left: Node
     operator: Token
-    right: Expression
-
-    def __str__(self):
-        return f"({self.left} {self.operator.text} {self.right})"
+    right: Node
 
 
 @dataclass
-class Unary(Expression):
-    """
-    Unary expressions representation
-    Every unary representation has an operator and an operand
-    """
+class Unary(Node):
     operator: Token
-    right: Expression
-
-    def __str__(self):
-        return f"({self.operator.text} {self.right})"
+    right: Node
 
 
 @dataclass
-class Grouping(Expression):
-    """
-    Grouping expressions representation
-    Stores the expression inside the grouping tokens
-    """
-    expression: Expression
-
-    def __str__(self):
-        return f"({self.expression})"
+class Grouping(Node):
+    expression: Node
 
 
 @dataclass
-class Call(Expression):
-    called: Expression
-    arguments: [Expression]
+class Call(Node):
+    called: Node
+    arguments: [Node]
 
 
 @dataclass
-class Literal(Expression):
-    """
-    Literal representation
-    Stores the value for a literal
-    """
+class Literal(Node):
     value: object
 
-    def __str__(self):
-        return f"{self.value}"
-
 
 @dataclass
-class Variable(Expression):
+class Variable(Node):
     name: Token
 
-    def __str__(self):
-        return f"{self.name}"
-
-
-class Statement:
-    def eval(self, interpreter):
-        return interpreter.eval(self)
-
 
 @dataclass
-class VarDeclaration(Statement):
+class VarDeclaration(Node):
     name: Token
-    expression: Expression
+    type: Token
+    expression: Node
 
 
 @dataclass
-class ExpressionStatement(Statement):
-    expression: Expression
+class ExpressionStatement(Node):
+    expression: Node
 
 
 @dataclass
-class Function(Statement):
+class Function(Node):
     name: Token
-    params: [Token]
-    body: [Expression]
+    params: [(Token, Token)]
+    return_type: Token
+    body: [Node]
 
 
 @dataclass
-class Return(Statement):
-    expression: Expression
+class Return(Node):
+    expression: Node
 
 
 @dataclass
-class If(Statement):
-    condition: Expression
-    code: [Statement]
-    else_code: [Statement]
+class If(Node):
+    condition: Node
+    code: [Node]
+    else_code: [Node]
+
+
+@dataclass
+class While(Node):
+    condition: Node
+    code: [Node]

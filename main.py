@@ -1,6 +1,6 @@
 from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
-from interpreter import Interpreter
+from interpreter import Interpreter, TypeChecker
 from token_matchers import matches
 
 if __name__ == '__main__':
@@ -14,5 +14,7 @@ if __name__ == '__main__':
 
     ast = Parser().parse(tokens)
     interpreter = Interpreter()
+    checker = TypeChecker()
 
+    checker.start(ast)
     interpreter.interpret(ast)

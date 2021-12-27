@@ -1,2 +1,2 @@
 from .interpreter import Interpreter
-from .scope import Scope
+from .checker import TypeChecker

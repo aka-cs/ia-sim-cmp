@@ -1,8 +1,9 @@
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
+from tools import visitor
+from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
-from .visitor import visitor
-from .functions import builtin_print, UserDefinedFunction, ReturnCall
+from .builtin import builtin_functions
 
 
 class Interpreter:
@@ -10,10 +11,10 @@ class Interpreter:
     def __init__(self):
         self.globals: Scope = Scope()
         self.scope: Scope = self.globals
+        for fun in builtin_functions:
+            self.globals.declare(fun.name, fun)
 
-        self.globals.declare("print", builtin_print)
-
-    def interpret(self, expressions: [Expression]):
+    def interpret(self, expressions: [Node]):
         for expression in expressions:
             expression.eval(self)
 
@@ -83,15 +84,13 @@ class Interpreter:
     def eval(self, expression: Call):
         called = expression.called.eval(self)
         arguments = []
-        if len(expression.arguments) != called.number_arguments:
-            raise Exception("Invalid number of arguments")
         for arg in expression.arguments:
             arguments.append(arg.eval(self))
         return called(self, arguments)
 
     @visitor(Function)
     def eval(self, expression: Function):
-        self.scope.declare(expression.name.text, UserDefinedFunction(expression, len(expression.params)))
+        self.scope.declare(expression.name.text, UserDefinedFunction(expression))
 
     @visitor(Return)
     def eval(self, expression: Return):
@@ -106,6 +105,11 @@ class Interpreter:
             self.execute_block(expression.code, Scope(self.scope))
         else:
             self.execute_block(expression.else_code, Scope(self.scope))
+
+    @visitor(While)
+    def eval(self, expression: While):
+        while expression.condition.eval(self):
+            self.execute_block(expression.code, Scope(self.scope))
 
     def execute_block(self, statements, scope: Scope):
         previous = self.scope

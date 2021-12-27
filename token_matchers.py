@@ -33,6 +33,7 @@ matches = [
     TokenMatcher(r'\.', TokenType.DOT),
     TokenMatcher(r',', TokenType.COMMA),
     TokenMatcher(r';', TokenType.SEMICOLON),
+    TokenMatcher(r':', TokenType.COLON),
     TokenMatcher(' ', TokenType.SPACE),
     TokenMatcher('\n|\r|\n\r', TokenType.LINEBREAK)
 ]
