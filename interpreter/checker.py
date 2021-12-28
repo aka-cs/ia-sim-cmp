@@ -111,7 +111,7 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(Assignment)
     def check(self, expression: Assignment):
-        expression_type = expression.check(self)
+        expression_type = expression.value.check(self)
         variable_type = self.scope.get(expression.var_name.text)
         if not variable_type >= expression_type:
             raise TypeError(f"Variable {expression.var_name.text} of type {variable_type} can't be assigned {expression_type}")
