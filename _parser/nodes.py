@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from tokenizer.token_ import Token
+from typing import Optional
 
 
 class Node:
@@ -14,6 +15,23 @@ class Node:
 class Assignment(Node):
     var_name: Token
     value: Node
+
+
+@dataclass
+class ArrayNode(Node):
+    expressions: [Node]
+
+
+@dataclass
+class Index(Node):
+    expression: Node
+    index: Node
+
+
+@dataclass
+class VarType(Node):
+    type: Token
+    nested: Optional['VarType'] = None
 
 
 @dataclass
@@ -53,7 +71,7 @@ class Variable(Node):
 @dataclass
 class VarDeclaration(Node):
     name: Token
-    type: Token
+    type: VarType
     expression: Node
 
 
@@ -63,10 +81,10 @@ class ExpressionStatement(Node):
 
 
 @dataclass
-class Function(Node):
+class FunctionNode(Node):
     name: Token
-    params: [(Token, Token)]
-    return_type: Token
+    params: [(Token, VarType)]
+    return_type: VarType
     body: [Node]
 
 

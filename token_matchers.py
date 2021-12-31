@@ -2,16 +2,19 @@ from tokenizer.tokenizer import TokenMatcher
 from tokenizer.token_type import TokenType
 
 matches = [
-    TokenMatcher(r'-?\d+(.\d+)?', TokenType.NUMBER),
+    TokenMatcher(r'-?\d+', TokenType.INTEGER),
+    TokenMatcher(r'-?\d+(.\d+)?', TokenType.FLOAT),
     TokenMatcher(r'"([^"]|\\")*[^\\]?"', TokenType.STRING),  # Regex is not prepared for strings yet
     TokenMatcher(r'\+', TokenType.PLUS),
     TokenMatcher(r'\-', TokenType.MINUS),
     TokenMatcher(r'\*', TokenType.MULTIPLY),
     TokenMatcher(r'\/', TokenType.DIVIDE),
-    TokenMatcher(r'\(', TokenType.LEFT_PARENTHESIS),
-    TokenMatcher(r'\)', TokenType.RIGHT_PARENTHESIS),
-    TokenMatcher(r'\{', TokenType.LEFT_BRACKET),
-    TokenMatcher(r'\}', TokenType.RIGHT_BRACKET),
+    TokenMatcher(r'\(', TokenType.OPEN_PARENTHESIS),
+    TokenMatcher(r'\)', TokenType.CLOSE_PARENTHESIS),
+    TokenMatcher(r'\{', TokenType.OPEN_BRACES),
+    TokenMatcher(r'\}', TokenType.CLOSE_BRACES),
+    TokenMatcher(r'\[', TokenType.OPEN_BRACKETS),
+    TokenMatcher(r'\]', TokenType.CLOSE_BRACKETS),
     TokenMatcher(r'var', TokenType.VAR),
     TokenMatcher(r'fun', TokenType.FUN),
     TokenMatcher(r'if', TokenType.IF),

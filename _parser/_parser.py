@@ -15,10 +15,10 @@ class Parser(metaclass=Singleton):
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
         statements = if_s, else_s, while_s, fun_s, var_s, return_s = CreateTerminals("if else while fun var return".split())
-        specials = number, identifier, string = CreateTerminals("number identifier string".split())
-        grouping = left_p, right_p, left_b, right_b = CreateTerminals("( ) { }".split())
+        specials = integer, _float, identifier, string = CreateTerminals("int float identifier string".split())
+        grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
-        boolean = true_i, false_i = CreateTerminals("true false".split())
+        boolean = true_i, false_i, null_i = CreateTerminals("true false null".split())
 
         terminals = [symbol, *operators, *comparison, *logic, *statements, *specials, *grouping, *punctuation, *boolean]
 
@@ -26,16 +26,18 @@ class Parser(metaclass=Singleton):
             = p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg,\
             p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
             p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
-            p_factor, p_factor_op, p_unary, p_unary_op, p_call, p_arguments, p_more_arguments, p_primary \
+            p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
+            p_array, p_array_elem, p_more_array_elem, p_type \
             = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
-                                 "Factor Factor_op Unary Unary_op Call Arguments MoreArguments Primary".split())
+                                 "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
+                                 "Array ArrayElem MoreArrayElem Type".split())
 
         e = Epsilon()
 
         productions = [
-            p_statements > (p_statements + p_statement | p_statement, lambda x: [*x[0], x[1]], lambda x: [x[0]]),
+            p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
             p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s,
                            lambda x: x[0],
                            lambda x: x[0],
@@ -45,25 +47,26 @@ class Parser(metaclass=Singleton):
                            lambda x: x[0],
                            lambda x: x[0]),
 
-            p_if > (if_s + left_p + p_expression + right_p + left_b + p_statements + p_else,
+            p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + p_else,
                     lambda x: If(x[2], x[5], x[6])),
-            p_else > (right_b + else_s + left_b + p_statements + right_b | right_b,
+            p_else > (close_b + else_s + open_b + p_statements + close_b | close_b,
                       lambda x: x[3],
                       lambda x: []),
 
-            p_while > (while_s + left_p + p_expression + right_p + left_b + p_statements + right_b,
+            p_while > (while_s + open_p + p_expression + close_p + open_b + p_statements + close_b,
                        lambda x: While(x[2], x[5])),
 
             p_var_declaration > (var_s + identifier + p_var_type + equals + p_equality + semicolon,
                                  lambda x: VarDeclaration(x[1], x[2], x[4])),
-            p_var_type > (colon + identifier | e, lambda x: x[1], lambda x: None),
+            p_var_type > (colon + p_type | e, lambda x: x[1], lambda x: None),
+            p_type > (identifier + less + p_type + greater | identifier, lambda x: VarType(x[0], x[2]), lambda x: VarType(x[0])),
             p_assign > (identifier + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
-            p_fun_declaration > (fun_s + identifier + left_p + p_params + colon + identifier + left_b + p_statements + right_b,
-                                 lambda x: Function(x[1], x[3], x[5], x[7])),
+            p_fun_declaration > (fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
+                                 lambda x: FunctionNode(x[1], x[3], x[5], x[7])),
 
-            p_params > (identifier + colon + identifier + p_more_params | right_p,
+            p_params > (identifier + colon + p_type + p_more_params | close_p,
                         lambda x: [(x[0], x[2]), *x[3]], lambda x: []),
-            p_more_params > (comma + identifier + colon + identifier + p_more_params | right_p,
+            p_more_params > (comma + identifier + colon + p_type + p_more_params | close_p,
                              lambda x: [(x[1], x[3]), *x[4]], lambda x: []),
 
             p_return > (return_s + p_return_arg, lambda x: Return(x[1])),
@@ -76,18 +79,26 @@ class Parser(metaclass=Singleton):
             p_comparison > (p_comparison + p_comparison_op + p_term | p_term, lambda x: Binary(*x), lambda x: x[0]),
             p_term > (p_term + p_term_op + p_factor | p_factor, lambda x: Binary(*x), lambda x: x[0]),
             p_factor > (p_factor + p_factor_op + p_unary | p_unary, lambda x: Binary(*x), lambda x: x[0]),
-            p_unary > (p_unary_op + p_unary | p_call, lambda x: Unary(*x), lambda x: x[0]),
-            p_call > (p_primary | p_primary + left_p + p_arguments, lambda x: x[0], lambda x: Call(x[0], x[2])),
-            p_primary > (number | string | identifier | true_i | false_i | left_p + p_logic + right_p,
+            p_unary > (p_unary_op + p_unary | p_index, lambda x: Unary(*x), lambda x: x[0]),
+            p_index > (p_call | p_call + open_br + p_expression + close_br, lambda x: x[0], lambda x: Index(x[0], x[2])),
+            p_call > (p_primary | p_primary + open_p + p_arguments, lambda x: x[0], lambda x: Call(x[0], x[2])),
+            p_primary > (integer | _float | string | identifier | true_i | false_i | null_i | open_p + p_logic + close_p | p_array,
+                         lambda x: Literal(int(x[0].text)),
                          lambda x: Literal(float(x[0].text)),
                          lambda x: Literal(x[0].text),
                          lambda x: Variable(x[0]),
                          lambda x: Literal(True),
                          lambda x: Literal(False),
-                         lambda x: x[1]),
+                         lambda x: Literal(None),
+                         lambda x: x[1],
+                         lambda x: x[0]),
 
-            p_arguments > (p_expression + p_more_arguments | right_p, lambda x: [x[0], *x[1]], lambda x: []),
-            p_more_arguments > (comma + p_expression + p_more_arguments | right_p, lambda x: [x[1], *x[2]], lambda x: []),
+            p_arguments > (p_expression + p_more_arguments | close_p, lambda x: [x[0], *x[1]], lambda x: []),
+            p_more_arguments > (comma + p_expression + p_more_arguments | close_p, lambda x: [x[1], *x[2]], lambda x: []),
+
+            p_array > (open_br + p_array_elem + close_br, lambda x: ArrayNode(x[1])),
+            p_array_elem > (p_expression + p_more_array_elem | e, lambda x: [x[0], *x[1]], lambda x: []),
+            p_more_array_elem > (comma + p_expression + p_more_array_elem | e, lambda x: [x[1], *x[2]], lambda x: []),
 
             p_logic_op > (and_operator | or_operator, lambda x: x[0], lambda x: x[0]),
             p_equality_op > (equals_equals | different, lambda x: x[0], lambda x: x[0]),
@@ -103,7 +114,8 @@ class Parser(metaclass=Singleton):
         self.parser = LR1Parser(grammar)
         self.mapping = {
             TokenType.IDENTIFIER: identifier,
-            TokenType.NUMBER: number,
+            TokenType.INTEGER: integer,
+            TokenType.FLOAT: _float,
             TokenType.STRING: string,
             TokenType.EQUAL: equals,
             TokenType.EQUAL_EQUAL: equals_equals,
@@ -118,14 +130,17 @@ class Parser(metaclass=Singleton):
             TokenType.FUN: fun_s,
             TokenType.RETURN: return_s,
             TokenType.VAR: var_s,
-            TokenType.LEFT_PARENTHESIS: left_p,
-            TokenType.RIGHT_PARENTHESIS: right_p,
-            TokenType.LEFT_BRACKET: left_b,
-            TokenType.RIGHT_BRACKET: right_b,
+            TokenType.OPEN_PARENTHESIS: open_p,
+            TokenType.CLOSE_PARENTHESIS: close_p,
+            TokenType.OPEN_BRACES: open_b,
+            TokenType.CLOSE_BRACES: close_b,
+            TokenType.OPEN_BRACKETS: open_br,
+            TokenType.CLOSE_BRACKETS: close_br,
             TokenType.AND: and_operator,
             TokenType.OR: or_operator,
             TokenType.TRUE: true_i,
             TokenType.FALSE: false_i,
+            TokenType.NULL: null_i,
             TokenType.PLUS: plus,
             TokenType.MINUS: minus,
             TokenType.MULTIPLY: mul,

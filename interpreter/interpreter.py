@@ -4,6 +4,7 @@ from tools import visitor
 from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
 from .builtin import builtin_functions
+from ._types import Float, Int, String, Bool, Null, Array
 
 
 class Interpreter:
@@ -20,7 +21,29 @@ class Interpreter:
 
     @visitor(Literal)
     def eval(self, literal: Literal):
-        return literal.value
+        if isinstance(literal.value, float):
+            return Float(literal.value)
+        if isinstance(literal.value, int):
+            return Int(literal.value)
+        if isinstance(literal.value, str):
+            return String(literal.value)
+        if isinstance(literal.value, bool):
+            return Bool(literal.value)
+        if literal.value is None:
+            return Null()
+
+    @visitor(ArrayNode)
+    def eval(self, expression: ArrayNode):
+        result = []
+        for elem in expression.expressions:
+            result.append(elem.eval(self))
+        return Array(result)
+
+    @visitor(Index)
+    def eval(self, expression: Index):
+        left = expression.expression.eval(self)
+        index = expression.index.eval(self)
+        return left[index]
 
     @visitor(Grouping)
     def eval(self, grouping: Grouping):
@@ -88,8 +111,8 @@ class Interpreter:
             arguments.append(arg.eval(self))
         return called(self, arguments)
 
-    @visitor(Function)
-    def eval(self, expression: Function):
+    @visitor(FunctionNode)
+    def eval(self, expression: FunctionNode):
         self.scope.declare(expression.name.text, UserDefinedFunction(expression))
 
     @visitor(Return)

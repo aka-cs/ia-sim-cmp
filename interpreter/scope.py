@@ -12,7 +12,7 @@ class Scope:
         else:
             raise Exception(f"Variable {name} already exists")
 
-    def get(self, name: str) -> object:
+    def get(self, name: str):
         if name in self.variables:
             return self.variables[name]
         if self.father:

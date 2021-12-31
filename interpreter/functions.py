@@ -1,16 +1,24 @@
 from dataclasses import dataclass
 from typing import Callable
-from _parser.nodes import Function
+from _parser.nodes import FunctionNode
 from interpreter.scope import Scope
-from .types import Type
+from ._types import Type
 
 
-@dataclass
+class Function:
+
+    def __init__(self, param_types: [Type], return_type: Type):
+        self.params_types = param_types
+        self.return_type = return_type
+
+
 class BuiltinFunction:
-    name: str
-    function: Callable
-    param_type: [Type]
-    return_type: Type
+
+    def __init__(self, name: str, function: Callable, param_type: [Type], return_type: Type):
+        self.name = name
+        self.function = function
+        self.param_type = param_type
+        self.return_type = return_type
 
     def __call__(self, interpreter, arguments):
         return self.function(*arguments)
@@ -20,14 +28,9 @@ class BuiltinFunction:
 
 
 class UserDefinedFunction:
-    declaration: Function
 
-    def __init__(self, function: Function):
+    def __init__(self, function: FunctionNode):
         self.declaration = function
-        self.param_type: [str] = []
-        self.return_type: str = function.return_type.text
-        for param in function.params:
-            self.param_type.append(param[1].text)
 
     def __call__(self, interpreter, arguments):
         scope = Scope(interpreter.globals)
@@ -45,4 +48,3 @@ class UserDefinedFunction:
 @dataclass
 class ReturnCall(Exception):
     value: object
-

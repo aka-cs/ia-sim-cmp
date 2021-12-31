@@ -3,10 +3,12 @@ from enum import Enum, auto
 
 class TokenType(Enum):
     # single character
-    LEFT_PARENTHESIS = auto()
-    RIGHT_PARENTHESIS = auto()
-    LEFT_BRACKET = auto()
-    RIGHT_BRACKET = auto()
+    OPEN_PARENTHESIS = auto()
+    CLOSE_PARENTHESIS = auto()
+    OPEN_BRACES = auto()
+    CLOSE_BRACES = auto()
+    OPEN_BRACKETS = auto()
+    CLOSE_BRACKETS = auto()
     COMMA = auto()
     DOT = auto()
     SEMICOLON = auto()
@@ -29,7 +31,8 @@ class TokenType(Enum):
     EQUAL_DIFFERENT = auto()
 
     # literals
-    NUMBER = auto()
+    INTEGER = auto()
+    FLOAT = auto()
     STRING = auto()
     IDENTIFIER = auto()
 
