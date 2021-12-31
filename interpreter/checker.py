@@ -171,6 +171,8 @@ class TypeChecker(metaclass=Singleton):
             scope.declare(param[0].text, param[1].check(self))
         self.current_function = self.scope.get(expression.name.text)
         self.check_block(expression.body, scope)
+        if not issubclass(self.current_function.return_type, Null) and not self.check_return_paths(expression.body):
+            raise Exception("All code paths don't return a value")
         self.current_function = None
 
     @visitor(Return)
@@ -207,6 +209,16 @@ class TypeChecker(metaclass=Singleton):
                 self.check(statement)
         finally:
             self.scope = previous
+
+    @staticmethod
+    def check_return_paths(body: [Node]):
+        for node in body:
+            if isinstance(node, Return):
+                return True
+            if isinstance(node, If):
+                if TypeChecker.check_return_paths(node.code) and TypeChecker.check_return_paths(node.else_code):
+                    return True
+        return False
 
     @staticmethod
     def can_assign(type1, type2):
