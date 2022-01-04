@@ -24,33 +24,35 @@ class Transpiler:
         return self.lines
 
     @visitor(Statement)
-    def eval(self, statement: Statement, tabs: int=0):
+    def eval(self, statement: Statement, tabs: int = 0):
         tabs_str = '\t' * tabs
-        self.lines.append(f"{tabs_str}{statement.code.eval(self)}")
+        result = statement.code.eval(self, tabs=tabs)
+        if result:
+            self.lines.append(f"{tabs_str}{result}")
     
     @visitor(Literal)
-    def eval(self, literal: Literal):
+    def eval(self, literal: Literal, tabs: int = 0):
         return str(literal.value)
     
     @visitor(ArrayNode)
-    def eval(self, expression: ArrayNode):
+    def eval(self, expression: ArrayNode, tabs: int = 0):
         result = []
         for elem in expression.expressions:
             result.append(elem.eval(self))
         return '[' + ', '.join(result) + ']'
     
     @visitor(Index)
-    def eval(self, expression: Index):
+    def eval(self, expression: Index, tabs: int = 0):
         left = expression.expression.eval(self)
         index = expression.index.eval(self)
         return f'{left}[{index}]'
     
     @visitor(Grouping)
-    def eval(self, grouping: Grouping):
+    def eval(self, grouping: Grouping, tabs: int = 0):
         return f'({grouping.expression.eval(self)})'
     
     @visitor(Unary)
-    def eval(self, unary: Unary):
+    def eval(self, unary: Unary, tabs: int = 0):
         right = unary.right.eval(self)
         if unary.operator.type == TokenType.MINUS:
             return f'-{right}'
@@ -59,7 +61,7 @@ class Transpiler:
         return ''
     
     @visitor(Binary)
-    def eval(self, binary: Binary):
+    def eval(self, binary: Binary, tabs: int = 0):
         left = binary.left.eval(self)
         right = binary.right.eval(self)
         if binary.operator.type == TokenType.MINUS:
@@ -88,38 +90,31 @@ class Transpiler:
             return f'{left} or {right}'
     
     @visitor(Variable)
-    def eval(self, variable: Variable):
+    def eval(self, variable: Variable, tabs: int = 0):
         return variable.name.text
     
     @visitor(VarDeclaration)
     def eval(self, declaration: VarDeclaration, tabs: int = 0):
-        tabs_str = '\t' * tabs
-        self.lines.append(f"{tabs_str}{declaration.name.text} = {declaration.expression.eval(self)}")
+        return f"{declaration.name.text} = {declaration.expression.eval(self)}"
     
     @visitor(Assignment)
     def eval(self, assignment: Assignment, tabs: int = 0):
-        tabs_str = '\t' * tabs
-        self.lines.append(f"{tabs_str}{assignment.var_name.text} = {assignment.value.eval(self)}")
-        # self.scope.assign(assignment.var_name.text, assignment.value.eval(self))
+        return f"{assignment.var_name.text} = {assignment.value.eval(self)}"
     
     @visitor(ExpressionStatement)
     def eval(self, expression: ExpressionStatement, tabs: int = 0):
         return expression.expression.eval(self, tabs=tabs)
     
     @visitor(Call)
-    def eval(self, expression: Call, tabs=0):
-        tabs_str = '\t' * tabs
+    def eval(self, expression: Call, tabs: int = 0):
         called = expression.called.eval(self)
         arguments = []
         for arg in expression.arguments:
             arguments.append(arg.eval(self))
-        if tabs > 0:
-            self.lines.append(f'{tabs_str}{called}({", ".join(arguments)})')
-        else:
-            return f'{called}({", ".join(arguments)})'
+        return f'{called}({", ".join(arguments)})'
 
     @visitor(GetNode)
-    def eval(self, expression: GetNode, tabs: int=0):
+    def eval(self, expression: GetNode, tabs: int = 0):
         return f'{expression.left.eval(self)}.{expression.right.text}'
     
     @visitor(FunctionNode)
@@ -127,15 +122,13 @@ class Transpiler:
         params = map(lambda x: x[0].text, expression.params)
         self.lines.append(f'def {expression.name.text}({", ".join(params)}):')
         self.eval_block(expression.body, tabs + 1)
-        # self.scope.declare(expression.name.text, UserDefinedFunction(expression))
     
     @visitor(Return)
     def eval(self, expression: Return, tabs=0):
-        tabs_str = '\t' * tabs
         value = None
         if expression.expression:
             value = expression.expression.eval(self)
-        self.lines.append(f'{tabs_str}return {value}')
+        return f'return {value}'
     
     @visitor(If)
     def eval(self, expression: If, tabs: int = 0):
