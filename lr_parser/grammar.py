@@ -263,6 +263,9 @@ class Grammar:
         g.Initial = SS
         
         return g
+    
+    def to_string(self):
+        return repr((tuple(self.NonTerminals), tuple(self.Terminals), tuple(self.Productions), self.Initial))
 
 
 class Item:

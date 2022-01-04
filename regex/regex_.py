@@ -10,7 +10,7 @@ from regex.regex_ast import ConcatNode, UnionNode, StarNode, SymbolNode, MaybeNo
 
 
 @only_once
-def RegParser():
+def RegParser(path=None):
     terminals = symbol, pipe, star, o_par, c_par, maybe, number, letter, alphanum, plus,\
         o_bracket, c_bracket, minus, compliment =\
         CreateTerminals(r'symbol | * ( ) ? \d \l \w + [ ] - ^'.split())
@@ -39,7 +39,7 @@ def RegParser():
              lambda x: SymbolInBracketsNode(x[0]))
     ])
     
-    return LR1Parser(RegGrammar)
+    return LR1Parser(RegGrammar, path=path)
 
 
 def _tokenize(regex: str):

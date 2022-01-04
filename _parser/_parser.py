@@ -8,7 +8,7 @@ from tools import Singleton
 
 class Parser(metaclass=Singleton):
 
-    def __init__(self):
+    def __init__(self, path=None):
         symbol = Terminal("symbol")
         operators = equals, plus, minus, mul, div, exclamation = CreateTerminals("= + - * / !".split())
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
@@ -90,7 +90,7 @@ class Parser(metaclass=Singleton):
                          lambda x: Literal(True),
                          lambda x: Literal(False),
                          lambda x: Literal(None),
-                         lambda x: x[1],
+                         lambda x: Grouping(x[1]),
                          lambda x: x[0]),
 
             p_arguments > (p_expression + p_more_arguments | close_p, lambda x: [x[0], *x[1]], lambda x: []),
@@ -111,7 +111,7 @@ class Parser(metaclass=Singleton):
 
         grammar = Grammar(non_terminals, terminals, p_statements, productions)
 
-        self.parser = LR1Parser(grammar)
+        self.parser = LR1Parser(grammar, path=path)
         self.mapping = {
             TokenType.IDENTIFIER: identifier,
             TokenType.INTEGER: integer,

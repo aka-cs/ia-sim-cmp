@@ -4,11 +4,14 @@ from typing import Optional
 
 
 class Node:
-    def eval(self, interpreter):
-        return interpreter.eval(self)
+    def exec(self, interpreter):
+        return interpreter.exec(self)
 
     def check(self, checker):
         return checker.check(self)
+    
+    def eval(self, transpiler, **kwargs):
+        return transpiler.eval(self, **kwargs)
 
 
 @dataclass

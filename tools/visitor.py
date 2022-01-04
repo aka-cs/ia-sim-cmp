@@ -10,9 +10,9 @@ def _declaring_class(obj: type):
     return name[:name.rfind('.')]
 
 
-def _visitor_impl(self, arg):
+def _visitor_impl(self, arg, **kwargs):
     method = _methods[(_name(type(self)), type(arg))]
-    return method(self, arg)
+    return method(self, arg, **kwargs)
 
 
 def visitor(arg_type):

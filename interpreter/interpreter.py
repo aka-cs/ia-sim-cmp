@@ -17,10 +17,10 @@ class Interpreter:
 
     def interpret(self, expressions: [Node]):
         for expression in expressions:
-            expression.eval(self)
+            expression.exec(self)
 
     @visitor(Literal)
-    def eval(self, literal: Literal):
+    def exec(self, literal: Literal):
         if isinstance(literal.value, float):
             return Float(literal.value)
         if isinstance(literal.value, int):
@@ -33,25 +33,25 @@ class Interpreter:
             return Null()
 
     @visitor(ArrayNode)
-    def eval(self, expression: ArrayNode):
+    def exec(self, expression: ArrayNode):
         result = []
         for elem in expression.expressions:
-            result.append(elem.eval(self))
+            result.append(elem.exec(self))
         return Array(result)
 
     @visitor(Index)
-    def eval(self, expression: Index):
-        left = expression.expression.eval(self)
-        index = expression.index.eval(self)
+    def exec(self, expression: Index):
+        left = expression.expression.exec(self)
+        index = expression.index.exec(self)
         return left[index]
 
     @visitor(Grouping)
-    def eval(self, grouping: Grouping):
-        return grouping.eval(self)
+    def exec(self, grouping: Grouping):
+        return grouping.expression.exec(self)
 
     @visitor(Unary)
-    def eval(self, unary: Unary):
-        right = unary.right.eval(self)
+    def exec(self, unary: Unary):
+        right = unary.right.exec(self)
         if unary.operator.type == TokenType.MINUS:
             return -right
         elif unary.operator.type == TokenType.EXCLAMATION:
@@ -59,9 +59,9 @@ class Interpreter:
         return None
 
     @visitor(Binary)
-    def eval(self, binary: Binary):
-        left = binary.left.eval(self)
-        right = binary.right.eval(self)
+    def exec(self, binary: Binary):
+        left = binary.left.exec(self)
+        right = binary.right.exec(self)
         if binary.operator.type == TokenType.MINUS:
             return left - right
         if binary.operator.type == TokenType.PLUS:
@@ -88,50 +88,50 @@ class Interpreter:
             return left or right
 
     @visitor(Variable)
-    def eval(self, variable: Variable):
+    def exec(self, variable: Variable):
         return self.scope.get(variable.name.text)
 
     @visitor(VarDeclaration)
-    def eval(self, declaration: VarDeclaration):
-        self.scope.declare(declaration.name.text, declaration.expression.eval(self))
+    def exec(self, declaration: VarDeclaration):
+        self.scope.declare(declaration.name.text, declaration.expression.exec(self))
 
     @visitor(Assignment)
-    def eval(self, assignment: Assignment):
-        self.scope.assign(assignment.var_name.text, assignment.value.eval(self))
+    def exec(self, assignment: Assignment):
+        self.scope.assign(assignment.var_name.text, assignment.value.exec(self))
 
     @visitor(ExpressionStatement)
-    def eval(self, expression: ExpressionStatement):
-        return expression.expression.eval(self)
+    def exec(self, expression: ExpressionStatement):
+        return expression.expression.exec(self)
 
     @visitor(Call)
-    def eval(self, expression: Call):
-        called = expression.called.eval(self)
+    def exec(self, expression: Call):
+        called = expression.called.exec(self)
         arguments = []
         for arg in expression.arguments:
-            arguments.append(arg.eval(self))
+            arguments.append(arg.exec(self))
         return called(self, arguments)
 
     @visitor(FunctionNode)
-    def eval(self, expression: FunctionNode):
+    def exec(self, expression: FunctionNode):
         self.scope.declare(expression.name.text, UserDefinedFunction(expression))
 
     @visitor(Return)
-    def eval(self, expression: Return):
+    def exec(self, expression: Return):
         value = None
         if expression.expression:
-            value = expression.expression.eval(self)
+            value = expression.expression.exec(self)
         raise ReturnCall(value)
 
     @visitor(If)
-    def eval(self, expression: If):
-        if expression.condition.eval(self):
+    def exec(self, expression: If):
+        if expression.condition.exec(self):
             self.execute_block(expression.code, Scope(self.scope))
         else:
             self.execute_block(expression.else_code, Scope(self.scope))
 
     @visitor(While)
-    def eval(self, expression: While):
-        while expression.condition.eval(self):
+    def exec(self, expression: While):
+        while expression.condition.exec(self):
             self.execute_block(expression.code, Scope(self.scope))
 
     def execute_block(self, statements, scope: Scope):
@@ -139,6 +139,6 @@ class Interpreter:
         try:
             self.scope = scope
             for statement in statements:
-                self.eval(statement)
+                self.exec(statement)
         finally:
             self.scope = previous

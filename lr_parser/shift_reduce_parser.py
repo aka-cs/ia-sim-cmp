@@ -1,3 +1,5 @@
+import os
+import pickle
 from abc import abstractmethod
 from enum import Enum, auto
 
@@ -12,12 +14,26 @@ class Action(Enum):
 
 class ShiftReduceParser:
     
-    def __init__(self, g: Grammar, logs=False):
+    def __init__(self, g: Grammar, logs=False, path=None):
         self.G = g
         self.logs = logs
         self.action = {}
         self.goto = {}
-        self._build_parsing_table()
+        self.index_action = {}
+        self.index_goto = {}
+        loaded = False
+        if path:
+            try:
+                if open(f'{path}/parser_grammar.hash', 'r').read() == self.G.to_string():
+                    self.pickle_load(path)
+                    loaded = True
+            except FileNotFoundError:
+                pass
+        if not loaded:
+            self._build_parsing_table()
+            # pickle save
+            if path:
+                self.pickle_save(path)
         
     @abstractmethod
     def _build_parsing_table(self):
@@ -65,4 +81,39 @@ class ShiftReduceParser:
                     return output, operations
                 case _:
                     raise Exception()
+
+    def pickle_save(self, path):
+        os.makedirs(path, exist_ok=True)
+        
+        # Action table
+        self.index_action = {}
+        for k, (action, v) in self.action.items():
+            if action != Action.REDUCE:
+                self.index_action[k] = (action, v)
+                continue
+            self.index_action[k] = (action, self.G.Productions.index(v))
+        pickle.dump(self.index_action, open(f'{path}/parser_index_action.pkl', 'wb'))
+        
+        # GoTo table
+        self.index_goto = {}
+        for (i, non_terminal), v in self.goto.items():
+            self.index_goto[i, self.G.NonTerminals.index(non_terminal)] = v
+        pickle.dump(self.index_goto, open(f'{path}/parser_index_goto.pkl', 'wb'))
+        
+        with open(f'{path}/parser_grammar.hash', 'w') as f:
+            f.write(self.G.to_string())
+
+    def pickle_load(self, path):
+        # Action table
+        self.index_action = pickle.load(open(f'{path}/parser_index_action.pkl', 'rb'))
+        for k, (action, v) in self.index_action.items():
+            if action != Action.REDUCE:
+                self.action[k] = (action, v)
+                continue
+            self.action[k] = (action, self.G.Productions[v])
+            
+        # GoTo table
+        self.index_goto = pickle.load(open(f'{path}/parser_index_goto.pkl', 'rb'))
+        for (i, index), v in self.index_goto.items():
+            self.goto[i, self.G.NonTerminals[index]] = v
                     
