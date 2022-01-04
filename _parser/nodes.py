@@ -107,3 +107,14 @@ class If(Node):
 class While(Node):
     condition: Node
     code: [Node]
+
+
+@dataclass
+class GetNode(Node):
+    left: Node
+    right: Token
+
+
+@dataclass
+class Statement(Node):
+    code: Node

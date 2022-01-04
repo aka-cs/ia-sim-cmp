@@ -25,8 +25,8 @@ if __name__ == '__main__':
     checker = TypeChecker()
     transpiler = Transpiler()
 
-    checker.start(ast)
-    interpreter.interpret(ast)
+    # checker.start(ast)
+    # interpreter.interpret(ast)
     python_code = transpiler.transpile(ast)
     with open('out/program.py', 'w') as f:
         f.write('\n'.join(python_code))

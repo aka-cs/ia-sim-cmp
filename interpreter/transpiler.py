@@ -22,6 +22,11 @@ class Transpiler:
             expression.eval(self)
             self.lines.append('')
         return self.lines
+
+    @visitor(Statement)
+    def eval(self, statement: Statement, tabs: int=0):
+        tabs_str = '\t' * tabs
+        self.lines.append(f"{tabs_str}{statement.code.eval(self)}")
     
     @visitor(Literal)
     def eval(self, literal: Literal):
@@ -112,6 +117,10 @@ class Transpiler:
             self.lines.append(f'{tabs_str}{called}({", ".join(arguments)})')
         else:
             return f'{called}({", ".join(arguments)})'
+
+    @visitor(GetNode)
+    def eval(self, expression: GetNode, tabs: int=0):
+        return f'{expression.left.eval(self)}.{expression.right.text}'
     
     @visitor(FunctionNode)
     def eval(self, expression: FunctionNode, tabs: int = 0):

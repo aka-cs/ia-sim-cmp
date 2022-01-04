@@ -16,6 +16,7 @@ matches = [
     TokenMatcher(r'\[', TokenType.OPEN_BRACKETS),
     TokenMatcher(r'\]', TokenType.CLOSE_BRACKETS),
     TokenMatcher(r'var', TokenType.VAR),
+    TokenMatcher(r'class', TokenType.CLASS),
     TokenMatcher(r'fun', TokenType.FUN),
     TokenMatcher(r'if', TokenType.IF),
     TokenMatcher(r'else', TokenType.ELSE),

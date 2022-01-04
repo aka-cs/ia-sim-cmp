@@ -99,9 +99,9 @@ class Interpreter:
     def exec(self, assignment: Assignment):
         self.scope.assign(assignment.var_name.text, assignment.value.exec(self))
 
-    @visitor(ExpressionStatement)
-    def exec(self, expression: ExpressionStatement):
-        return expression.expression.exec(self)
+    @visitor(Statement)
+    def exec(self, expression: Statement):
+        return expression.code.exec(self)
 
     @visitor(Call)
     def exec(self, expression: Call):

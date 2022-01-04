@@ -14,7 +14,8 @@ class Parser(metaclass=Singleton):
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
-        statements = if_s, else_s, while_s, fun_s, var_s, return_s = CreateTerminals("if else while fun var return".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s \
+            = CreateTerminals("if else while fun var return class".split())
         specials = integer, _float, identifier, string = CreateTerminals("int float identifier string".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
@@ -27,30 +28,31 @@ class Parser(metaclass=Singleton):
             p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
             p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
             p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
-            p_array, p_array_elem, p_more_array_elem, p_type \
+            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_get \
             = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
-                                 "Array ArrayElem MoreArrayElem Type".split())
+                                 "Array ArrayElem MoreArrayElem Type Class Get".split())
 
         e = Epsilon()
 
         productions = [
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s,
-                           lambda x: x[0],
-                           lambda x: x[0],
-                           lambda x: x[0],
-                           lambda x: x[0],
-                           lambda x: x[0],
-                           lambda x: x[0],
-                           lambda x: x[0]),
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s | p_class,
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0])),
 
-            p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + p_else,
-                    lambda x: If(x[2], x[5], x[6])),
-            p_else > (close_b + else_s + open_b + p_statements + close_b | close_b,
-                      lambda x: x[3],
+            p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + close_b + p_else,
+                    lambda x: If(x[2], x[5], x[7])),
+            p_else > (else_s + open_b + p_statements + close_b | e,
+                      lambda x: x[2],
                       lambda x: []),
 
             p_while > (while_s + open_p + p_expression + close_p + open_b + p_statements + close_b,
@@ -81,20 +83,24 @@ class Parser(metaclass=Singleton):
             p_factor > (p_factor + p_factor_op + p_unary | p_unary, lambda x: Binary(*x), lambda x: x[0]),
             p_unary > (p_unary_op + p_unary | p_index, lambda x: Unary(*x), lambda x: x[0]),
             p_index > (p_call | p_call + open_br + p_expression + close_br, lambda x: x[0], lambda x: Index(x[0], x[2])),
-            p_call > (p_primary | p_primary + open_p + p_arguments, lambda x: x[0], lambda x: Call(x[0], x[2])),
-            p_primary > (integer | _float | string | identifier | true_i | false_i | null_i | open_p + p_logic + close_p | p_array,
+            p_call > (p_primary | p_get,
+                      lambda x: x[0],
+                      lambda x: x[0]),
+            p_primary > (integer | _float | string | true_i | false_i | null_i | open_p + p_logic + close_p | p_array,
                          lambda x: Literal(int(x[0].text)),
                          lambda x: Literal(float(x[0].text)),
                          lambda x: Literal(x[0].text),
-                         lambda x: Variable(x[0]),
                          lambda x: Literal(True),
                          lambda x: Literal(False),
                          lambda x: Literal(None),
                          lambda x: Grouping(x[1]),
                          lambda x: x[0]),
 
-            p_arguments > (p_expression + p_more_arguments | close_p, lambda x: [x[0], *x[1]], lambda x: []),
-            p_more_arguments > (comma + p_expression + p_more_arguments | close_p, lambda x: [x[1], *x[2]], lambda x: []),
+            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier,
+                     lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]), lambda x: Variable(x[0])),
+
+            p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
+            p_more_arguments > (comma + p_expression + p_more_arguments | e, lambda x: [x[1], *x[2]], lambda x: []),
 
             p_array > (open_br + p_array_elem + close_br, lambda x: ArrayNode(x[1])),
             p_array_elem > (p_expression + p_more_array_elem | e, lambda x: [x[0], *x[1]], lambda x: []),
@@ -127,6 +133,7 @@ class Parser(metaclass=Singleton):
             TokenType.IF: if_s,
             TokenType.ELSE: else_s,
             TokenType.WHILE: while_s,
+            TokenType.CLASS: class_s,
             TokenType.FUN: fun_s,
             TokenType.RETURN: return_s,
             TokenType.VAR: var_s,

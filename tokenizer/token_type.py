@@ -38,6 +38,7 @@ class TokenType(Enum):
 
     # keywords
     VAR = auto()
+    CLASS = auto()
     FUN = auto()
     VEHICLE = auto()
     CARGO = auto()
