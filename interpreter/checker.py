@@ -145,7 +145,7 @@ class TypeChecker(metaclass=Singleton):
         if not self.can_assign(expression_type, left_type):
             raise TypeError(
                 f"Can't assign {expression_type} to {left_type} object")
-        self.scope.assign(expression.left.name.text, expression_type)
+        # self.scope.assign(expression.left.name.text, expression_type)
 
     @visitor(ExpressionStatement)
     def check(self, expression: ExpressionStatement):
