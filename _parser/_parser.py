@@ -14,9 +14,9 @@ class Parser(metaclass=Singleton):
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
-        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s \
-            = CreateTerminals("if else while fun var return class".split())
-        specials = integer, _float, identifier, string = CreateTerminals("int float identifier string".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr \
+            = CreateTerminals("if else while fun var return class attr".split())
+        specials = integer, _float, identifier, string, _self = CreateTerminals("int float identifier string self".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
         boolean = true_i, false_i, null_i = CreateTerminals("true false null".split())
@@ -28,18 +28,19 @@ class Parser(metaclass=Singleton):
             p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
             p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
             p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
-            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_get \
+            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr \
             = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
-                                 "Array ArrayElem MoreArrayElem Type Class Get".split())
+                                 "Array ArrayElem MoreArrayElem Type Class ClassMembers Get Set Attribute".split())
 
         e = Epsilon()
 
         productions = [
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s | p_class,
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s | p_class | p_attr,
+                           lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -48,6 +49,9 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
+
+            p_class > (class_s + identifier + open_b + p_class_members + close_b, lambda x: ClassNode(x[1], x[3])),
+            p_class_members > (p_fun_declaration + p_class_members | e, lambda x: [x[0], *x[1]], lambda x: []),
 
             p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + close_b + p_else,
                     lambda x: If(x[2], x[5], x[7])),
@@ -60,9 +64,11 @@ class Parser(metaclass=Singleton):
 
             p_var_declaration > (var_s + identifier + p_var_type + equals + p_equality + semicolon,
                                  lambda x: VarDeclaration(x[1], x[2], x[4])),
+            p_attr > (attr + identifier + p_var_type + equals + p_equality + semicolon,
+                      lambda x: AttrDeclaration(x[1], x[2], x[4])),
             p_var_type > (colon + p_type | e, lambda x: x[1], lambda x: None),
             p_type > (identifier + less + p_type + greater | identifier, lambda x: VarType(x[0], x[2]), lambda x: VarType(x[0])),
-            p_assign > (identifier + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
+            p_assign > (p_set + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
             p_fun_declaration > (fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
                                  lambda x: FunctionNode(x[1], x[3], x[5], x[7])),
 
@@ -96,8 +102,10 @@ class Parser(metaclass=Singleton):
                          lambda x: Grouping(x[1]),
                          lambda x: x[0]),
 
-            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier,
-                     lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]), lambda x: Variable(x[0])),
+            p_set > (p_get + dot + identifier | identifier, lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0])),
+            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self,
+                     lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
+                     lambda x: Variable(x[0]), lambda x: SelfNode()),
 
             p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
             p_more_arguments > (comma + p_expression + p_more_arguments | e, lambda x: [x[1], *x[2]], lambda x: []),
@@ -119,6 +127,7 @@ class Parser(metaclass=Singleton):
 
         self.parser = LR1Parser(grammar, path=path)
         self.mapping = {
+            TokenType.SELF: _self,
             TokenType.IDENTIFIER: identifier,
             TokenType.INTEGER: integer,
             TokenType.FLOAT: _float,
@@ -137,6 +146,7 @@ class Parser(metaclass=Singleton):
             TokenType.FUN: fun_s,
             TokenType.RETURN: return_s,
             TokenType.VAR: var_s,
+            TokenType.ATTR: attr,
             TokenType.OPEN_PARENTHESIS: open_p,
             TokenType.CLOSE_PARENTHESIS: close_p,
             TokenType.OPEN_BRACES: open_b,

@@ -99,7 +99,7 @@ class Transpiler:
     
     @visitor(Assignment)
     def eval(self, assignment: Assignment, tabs: int = 0):
-        return f"{assignment.var_name.text} = {assignment.value.eval(self)}"
+        return f"{assignment.left.eval(self)} = {assignment.value.eval(self)}"
     
     @visitor(ExpressionStatement)
     def eval(self, expression: ExpressionStatement, tabs: int = 0):
@@ -116,12 +116,37 @@ class Transpiler:
     @visitor(GetNode)
     def eval(self, expression: GetNode, tabs: int = 0):
         return f'{expression.left.eval(self)}.{expression.right.text}'
+
+    @visitor(ClassNode)
+    def eval(self, expression: ClassNode, tabs: int=0):
+        text = f"class {expression.name.text}:\n"
+        if not expression.methods:
+            text += "\tpass"
+            return text
+        self.lines.append(text)
+        for method in expression.methods:
+            method.eval(self, tabs=tabs+1)
+
+    @visitor(SelfNode)
+    def eval(self, expression: SelfNode, tabs: int = 0):
+        return "self"
+
+    @visitor(AttrDeclaration)
+    def eval(self, expression: AttrDeclaration, tabs: int = 0):
+        return f"self.{expression.name.text} = {expression.expression.eval(self)}"
     
     @visitor(FunctionNode)
     def eval(self, expression: FunctionNode, tabs: int = 0):
         params = map(lambda x: x[0].text, expression.params)
-        self.lines.append(f'def {expression.name.text}({", ".join(params)}):')
+        tabs_str = '\t' * tabs
+        function_name = expression.name.text
+        if tabs > 0:
+            params = ["self", *list(params)]
+            if expression.name.text == "init":
+                function_name = "__init__"
+        self.lines.append(f'{tabs_str}def {function_name}({", ".join(params)}):')
         self.eval_block(expression.body, tabs + 1)
+        self.lines.append("")
     
     @visitor(Return)
     def eval(self, expression: Return, tabs=0):

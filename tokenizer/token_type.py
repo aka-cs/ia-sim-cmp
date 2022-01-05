@@ -38,6 +38,7 @@ class TokenType(Enum):
 
     # keywords
     VAR = auto()
+    ATTR = auto()
     CLASS = auto()
     FUN = auto()
     VEHICLE = auto()
@@ -52,6 +53,7 @@ class TokenType(Enum):
     RETURN = auto()
     AND = auto()
     OR = auto()
+    SELF = auto()
 
     # End of File
     EOF = auto()

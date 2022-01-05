@@ -2,9 +2,10 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeArray, Array
+from ._types import Float, Int, String, Bool, Null, TypeArray
 from .functions import Function
 from .builtin import builtin_functions
+from .classes import Class
 
 
 class TypeChecker(metaclass=Singleton):
@@ -13,23 +14,20 @@ class TypeChecker(metaclass=Singleton):
         self.globals = Scope()
         self.scope = self.globals
         self.types = [Float, Int, String, Bool]
-        self.current_function = None
+        self.current_function: Function | None = None
+        self.current_class: Class | None = None
         for fun in builtin_functions:
-            self.scope.declare(fun.name, Function(fun.param_type, fun.return_type))
+            self.scope.declare(fun.name, Function(fun.name, fun.param_type, fun.return_type))
 
     def start(self, expressions: [Node]):
-        for expression in expressions:
-            if isinstance(expression, FunctionNode):
-                params = []
-                for param in expression.params:
-                    params.append(param[1].check(self))
-                if expression.return_type.type.text == "void" and not expression.return_type.nested:
-                    return_type = Null
-                else:
-                    return_type = expression.return_type.check(self)
-                self.scope.declare(expression.name.text, Function(params, return_type))
+        self.check_functions_in_scope(self.scope, expressions)
         for expression in expressions:
             expression.check(self)
+        return
+
+    @visitor(Statement)
+    def check(self, expression: Statement):
+        return expression.code.check(self)
 
     @visitor(Literal)
     def check(self, expression: Literal):
@@ -143,11 +141,11 @@ class TypeChecker(metaclass=Singleton):
     @visitor(Assignment)
     def check(self, expression: Assignment):
         expression_type = expression.value.check(self)
-        variable_type = self.scope.get(expression.var_name.text)
-        if not self.can_assign(expression_type, variable_type):
+        left_type = expression.left.check(self)
+        if not self.can_assign(expression_type, left_type):
             raise TypeError(
-                f"Variable {expression.var_name.text} of type {variable_type} can't be assigned {expression_type}")
-        self.scope.assign(expression.var_name.text, expression_type)
+                f"Can't assign {expression_type} to {left_type} object")
+        self.scope.assign(expression.left.name.text, expression_type)
 
     @visitor(ExpressionStatement)
     def check(self, expression: ExpressionStatement):
@@ -156,9 +154,9 @@ class TypeChecker(metaclass=Singleton):
     @visitor(Call)
     def check(self, expression: Call):
         called: Function = expression.called.check(self)
-        if len(expression.arguments) != len(called.params_types):
+        if len(expression.arguments) != len(called.param_types):
             raise Exception("Invalid number of arguments")
-        for arg, param in zip(expression.arguments, called.params_types):
+        for arg, param in zip(expression.arguments, called.param_types):
             arg_type = arg.check(self)
             if not self.can_assign(arg_type, param):
                 raise TypeError(f"Function with argument type {param} can't receive {arg_type}")
@@ -201,6 +199,52 @@ class TypeChecker(metaclass=Singleton):
             raise TypeError(f"while condition is not a boolean value")
         self.check_block(expression.code, Scope(self.scope))
 
+    @visitor(ClassNode)
+    def check(self, expression: ClassNode):
+        scope = Scope(self.scope)
+        self.check_functions_in_scope(scope, expression.methods)
+        params = []
+        if "init" in scope.variables:
+            if not issubclass(scope.variables.get("init").return_type, Null):
+                raise Exception("init method must have void return type")
+            params = scope.variables.get("init").param_types
+        created = Class(expression.name.text, None, scope)
+        self.current_class = created
+        self.types.append(created)
+        self.scope.declare(expression.name.text, Function(created.name, params, created))
+        expression.methods.sort(key=lambda x: {"init": 0}.get(x.name.text, 1))
+        self.check_block(expression.methods, scope)
+        self.current_class = None
+
+    @visitor(SelfNode)
+    def check(self, _):
+        if not self.current_class:
+            raise Exception("self must be contained in a class")
+        return self.current_class
+
+    @visitor(GetNode)
+    def check(self, expression: GetNode):
+        left: Class = expression.left.check(self)
+        return getattr(left, expression.right.text)
+
+    @visitor(AttrDeclaration)
+    def check(self, expression: AttrDeclaration):
+        if not self.current_class:
+            raise Exception("Attributes can only be created inside classes")
+        if self.current_function.name != "init":
+            raise Exception("Attributes can only be declared in init class method")
+        expression_type = expression.expression.check(self)
+        if expression.type:
+            attr_type = expression.type.check(self)
+            if not self.can_assign(expression_type, attr_type):
+                raise TypeError(
+                    f"Attribute {expression.name.text} of type {expression.type.type.text} can't be assigned {expression_type}")
+            expression_type = attr_type
+        else:
+            if issubclass(expression_type, Null):
+                raise TypeError("Can't infer type of null")
+        self.current_class.scope.declare(expression.name.text, expression_type)
+
     def check_block(self, statements, scope: Scope):
         previous = self.scope
         try:
@@ -210,13 +254,25 @@ class TypeChecker(metaclass=Singleton):
         finally:
             self.scope = previous
 
+    def check_functions_in_scope(self, scope: Scope, nodes: [Node]):
+        for node in nodes:
+            if isinstance(node, FunctionNode):
+                params = []
+                for param in node.params:
+                    params.append(param[1].check(self))
+                if node.return_type.type.text == "void" and not node.return_type.nested:
+                    return_type = Null
+                else:
+                    return_type = node.return_type.check(self)
+                scope.declare(node.name.text, Function(node.name.text, params, return_type))
+
     @staticmethod
     def check_return_paths(body: [Node]):
         for node in body:
-            if isinstance(node, Return):
+            if isinstance(node.code, Return):
                 return True
-            if isinstance(node, If):
-                if TypeChecker.check_return_paths(node.code) and TypeChecker.check_return_paths(node.else_code):
+            if isinstance(node.code, If):
+                if TypeChecker.check_return_paths(node.code.code) and TypeChecker.check_return_paths(node.code.else_code):
                     return True
         return False
 

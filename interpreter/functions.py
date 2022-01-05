@@ -7,8 +7,9 @@ from ._types import Type
 
 class Function:
 
-    def __init__(self, param_types: [Type], return_type: Type):
-        self.params_types = param_types
+    def __init__(self, name, param_types: [Type], return_type: Type):
+        self.name = name
+        self.param_types = param_types
         self.return_type = return_type
 
 

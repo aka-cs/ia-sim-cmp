@@ -15,12 +15,6 @@ class Node:
 
 
 @dataclass
-class Assignment(Node):
-    var_name: Token
-    value: Node
-
-
-@dataclass
 class ArrayNode(Node):
     expressions: [Node]
 
@@ -118,3 +112,27 @@ class GetNode(Node):
 @dataclass
 class Statement(Node):
     code: Node
+
+
+@dataclass
+class ClassNode(Node):
+    name: Token
+    methods: [FunctionNode]
+
+
+@dataclass
+class Assignment(Node):
+    left: Variable | GetNode
+    value: Node
+
+
+@dataclass
+class SelfNode(Node):
+    pass
+
+
+@dataclass
+class AttrDeclaration(Node):
+    name: Token
+    type: VarType
+    expression: Node

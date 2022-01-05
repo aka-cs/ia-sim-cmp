@@ -33,6 +33,9 @@ class Type(type):
     def __ge__(self, other):
         raise TypeError(f">= operator not supported for types {self} and {other}")
 
+    def __getattr__(self, item):
+        raise TypeError(f"{self} has no attribute {item}")
+
     def __str__(self):
         return self.__qualname__.lower()
 
@@ -181,7 +184,7 @@ class TypeString(Type):
 
 class String(Object, metaclass=TypeString):
 
-    def __init__(self, value):
+    def __init__(self, value: str):
         Object.__init__(self)
         self.value = value
 

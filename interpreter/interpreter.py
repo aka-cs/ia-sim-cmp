@@ -97,7 +97,7 @@ class Interpreter:
 
     @visitor(Assignment)
     def exec(self, assignment: Assignment):
-        self.scope.assign(assignment.var_name.text, assignment.value.exec(self))
+        self.scope.assign(assignment.left.text, assignment.value.exec(self))
 
     @visitor(Statement)
     def exec(self, expression: Statement):

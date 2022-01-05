@@ -2,6 +2,7 @@ from tokenizer.tokenizer import TokenMatcher
 from tokenizer.token_type import TokenType
 
 matches = [
+    TokenMatcher(r'self', TokenType.SELF),
     TokenMatcher(r'-?\d+', TokenType.INTEGER),
     TokenMatcher(r'-?\d+(.\d+)?', TokenType.FLOAT),
     TokenMatcher(r'"([^"]|\\")*[^\\]?"', TokenType.STRING),  # Regex is not prepared for strings yet
@@ -16,6 +17,7 @@ matches = [
     TokenMatcher(r'\[', TokenType.OPEN_BRACKETS),
     TokenMatcher(r'\]', TokenType.CLOSE_BRACKETS),
     TokenMatcher(r'var', TokenType.VAR),
+    TokenMatcher(r'attr', TokenType.ATTR),
     TokenMatcher(r'class', TokenType.CLASS),
     TokenMatcher(r'fun', TokenType.FUN),
     TokenMatcher(r'if', TokenType.IF),
