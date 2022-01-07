@@ -25,12 +25,12 @@ class Parser(metaclass=Singleton):
         terminals = [symbol, *operators, *comparison, *logic, *statements, *specials, *grouping, *punctuation, *boolean]
 
         non_terminals \
-            = p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg,\
-            p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
-            p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
-            p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
-            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass \
-            = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
+            = p_program, p_functions, p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg, \
+              p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op, \
+              p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
+              p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
+              p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass \
+            = CreateNonTerminals("Program Functions Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
@@ -39,10 +39,12 @@ class Parser(metaclass=Singleton):
         e = Epsilon()
 
         productions = [
+            p_program > (p_class + p_program | p_functions,
+                         lambda x: [Statement(x[0]), *x[1]], lambda x: x[0], lambda x: []),
+            p_functions > (p_fun_declaration + p_functions | e,
+                           lambda x: [Statement(x[0]), *x[1]], lambda x: []),
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_fun_declaration | p_return | p_expression_s | p_class | p_attr,
-                           lambda x: Statement(x[0]),
-                           lambda x: Statement(x[0]),
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr,
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -51,7 +53,8 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
 
-            p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b, lambda x: ClassNode(x[1], x[2], x[4])),
+            p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b,
+                       lambda x: ClassNode(x[1], x[2], x[4])),
             p_superclass > (colon + identifier | e, lambda x: x[1], lambda x: None),
             p_class_members > (p_fun_declaration + p_class_members | e, lambda x: [x[0], *x[1]], lambda x: []),
 
@@ -69,10 +72,13 @@ class Parser(metaclass=Singleton):
             p_attr > (attr + identifier + p_var_type + equals + p_equality + semicolon,
                       lambda x: AttrDeclaration(x[1], x[2], x[4])),
             p_var_type > (colon + p_type | e, lambda x: x[1], lambda x: None),
-            p_type > (identifier + less + p_type + greater | identifier, lambda x: VarType(x[0], x[2]), lambda x: VarType(x[0])),
+            p_type > (
+                identifier + less + p_type + greater | identifier, lambda x: VarType(x[0], x[2]),
+                lambda x: VarType(x[0])),
             p_assign > (p_set + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
-            p_fun_declaration > (fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
-                                 lambda x: FunctionNode(x[1], x[3], x[5], x[7])),
+            p_fun_declaration > (
+                fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
+                lambda x: FunctionNode(x[1], x[3], x[5], x[7])),
 
             p_params > (identifier + colon + p_type + p_more_params | close_p,
                         lambda x: [(x[0], x[2]), *x[3]], lambda x: []),
@@ -85,12 +91,14 @@ class Parser(metaclass=Singleton):
             p_expression_s > (p_expression + semicolon, lambda x: x[0]),
             p_expression > (p_logic, lambda x: x[0]),
             p_logic > (p_logic + p_logic_op + p_equality | p_equality, lambda x: Binary(*x), lambda x: x[0]),
-            p_equality > (p_equality + p_equality_op + p_comparison | p_comparison, lambda x: Binary(*x), lambda x: x[0]),
+            p_equality > (
+                p_equality + p_equality_op + p_comparison | p_comparison, lambda x: Binary(*x), lambda x: x[0]),
             p_comparison > (p_comparison + p_comparison_op + p_term | p_term, lambda x: Binary(*x), lambda x: x[0]),
             p_term > (p_term + p_term_op + p_factor | p_factor, lambda x: Binary(*x), lambda x: x[0]),
             p_factor > (p_factor + p_factor_op + p_unary | p_unary, lambda x: Binary(*x), lambda x: x[0]),
             p_unary > (p_unary_op + p_unary | p_index, lambda x: Unary(*x), lambda x: x[0]),
-            p_index > (p_call | p_call + open_br + p_expression + close_br, lambda x: x[0], lambda x: Index(x[0], x[2])),
+            p_index > (
+                p_call | p_call + open_br + p_expression + close_br, lambda x: x[0], lambda x: Index(x[0], x[2])),
             p_call > (p_primary | p_get,
                       lambda x: x[0],
                       lambda x: x[0]),
@@ -125,7 +133,7 @@ class Parser(metaclass=Singleton):
             p_unary_op > (exclamation | minus, lambda x: x[0], lambda x: x[0])
         ]
 
-        grammar = Grammar(non_terminals, terminals, p_statements, productions)
+        grammar = Grammar(non_terminals, terminals, p_program, productions)
 
         self.parser = LR1Parser(grammar, path=path)
         self.mapping = {

@@ -23,6 +23,11 @@ class TypeChecker(metaclass=Singleton):
         self.check_functions_in_scope(self.scope, expressions)
         for expression in expressions:
             expression.check(self)
+        if "main" not in self.scope.variables:
+            raise Exception("Program must define a main method")
+        main: Function = self.scope.get("main")
+        if len(main.param_types) != 0 or not issubclass(main.return_type, Null):
+            raise Exception("main method must return void and take no arguments")
         return
 
     @visitor(Statement)
@@ -277,7 +282,10 @@ class TypeChecker(metaclass=Singleton):
             self.scope = previous
 
     def check_functions_in_scope(self, scope: Scope, nodes: [Node]):
-        for node in nodes:
+        for _node in nodes:
+            node = _node
+            if isinstance(_node, Statement):
+                node = _node.code
             if isinstance(node, FunctionNode):
                 params = []
                 for param in node.params:

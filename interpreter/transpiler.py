@@ -21,6 +21,7 @@ class Transpiler:
         for expression in expressions:
             expression.eval(self)
             self.lines.append('')
+        self.lines.append("if __name__ == '__main__':\n\tmain()")
         return self.lines
 
     @visitor(Statement)
