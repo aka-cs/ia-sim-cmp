@@ -1,23 +1,26 @@
 from ._types import Type, Object
-from typing import Tuple
+from typing import Optional
 from .scope import Scope
 
 
 class Class(Type):
 
-    def __new__(mcs, name: str, super_classes: Tuple['Class'] | None, scope: Scope):
-        mcs.name = name
-        if super_classes:
-            mcs.super_classes = super_classes
+    def __new__(mcs, name: str, super_class: Optional['Class'], scope: Scope):
+        if super_class:
+            scope.father = super_class.scope
+            super_class = (super_class, )
         else:
-            mcs.super_classes = (Object, )
-        mcs.scope = scope
-        return super().__new__(mcs, mcs.name, mcs.super_classes, {})
+            super_class = (Object,)
+        class_to_return = super().__new__(mcs, name, super_class, {})
+        class_to_return.name = name
+        class_to_return.scope = scope
+        return class_to_return
 
     def __str__(self):
-        return f'{self.name}'
+        return self.__qualname__
 
     def __getattr__(self, item):
-        if item not in self.scope.variables:
+        try:
+            return self.scope.get(item)
+        except:
             raise TypeError(f"{self.name} type has no property or method {item}")
-        return self.scope.get(item)

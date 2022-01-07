@@ -2,7 +2,7 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeArray
+from ._types import Float, Int, String, Bool, Null, TypeArray, Object
 from .functions import Function
 from .builtin import builtin_functions
 from .classes import Class
@@ -164,6 +164,15 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(FunctionNode)
     def check(self, expression: FunctionNode):
+        if self.current_class and expression.name.text == "init":
+            if not issubclass(Object, self.current_class.__bases__[0]):
+                if not expression.body or not isinstance(expression.body[0].code, Call):
+                    raise Exception("init method must call super's init in first statement")
+                line = expression.body[0].code
+                if not isinstance(line.called, GetNode):
+                    raise Exception("init method must call super's init in first statement")
+                if not isinstance(line.called.left, SuperNode) or line.called.right.text != "init":
+                    raise Exception("init method must call super's init in first statement")
         scope = Scope(self.scope)
         for param in expression.params:
             scope.declare(param[0].text, param[1].check(self))
@@ -203,12 +212,19 @@ class TypeChecker(metaclass=Singleton):
     def check(self, expression: ClassNode):
         scope = Scope(self.scope)
         self.check_functions_in_scope(scope, expression.methods)
+        if expression.superclass:
+            super_class = self.get_class(expression.superclass.text)
+        else:
+            super_class = None
+        created = Class(expression.name.text, super_class, scope)
         params = []
-        if "init" in scope.variables:
-            if not issubclass(scope.variables.get("init").return_type, Null):
+        try:
+            init = getattr(created, "init")
+            if not issubclass(init.return_type, Null):
                 raise Exception("init method must have void return type")
-            params = scope.variables.get("init").param_types
-        created = Class(expression.name.text, None, scope)
+            params = init.param_types
+        except TypeError:
+            pass
         self.current_class = created
         self.types.append(created)
         self.scope.declare(expression.name.text, Function(created.name, params, created))
@@ -221,6 +237,12 @@ class TypeChecker(metaclass=Singleton):
         if not self.current_class:
             raise Exception("self must be contained in a class")
         return self.current_class
+
+    @visitor(SuperNode)
+    def check(self, _):
+        if not self.current_class:
+            raise Exception("self must be contained in a class")
+        return self.current_class.__bases__[0]
 
     @visitor(GetNode)
     def check(self, expression: GetNode):
@@ -265,6 +287,12 @@ class TypeChecker(metaclass=Singleton):
                 else:
                     return_type = node.return_type.check(self)
                 scope.declare(node.name.text, Function(node.name.text, params, return_type))
+
+    def get_class(self, name: str):
+        for t in self.types:
+            if str(t) == name:
+                return t
+        raise Exception(f"Class {name} not defined in scope")
 
     @staticmethod
     def check_return_paths(body: [Node]):

@@ -117,6 +117,7 @@ class Statement(Node):
 @dataclass
 class ClassNode(Node):
     name: Token
+    superclass: Token
     methods: [FunctionNode]
 
 
@@ -128,6 +129,11 @@ class Assignment(Node):
 
 @dataclass
 class SelfNode(Node):
+    pass
+
+
+@dataclass
+class SuperNode(Node):
     pass
 
 

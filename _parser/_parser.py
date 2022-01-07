@@ -16,7 +16,8 @@ class Parser(metaclass=Singleton):
         logic = and_operator, or_operator = CreateTerminals("and or".split())
         statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr \
             = CreateTerminals("if else while fun var return class attr".split())
-        specials = integer, _float, identifier, string, _self = CreateTerminals("int float identifier string self".split())
+        specials = integer, _float, identifier, string, _self, _super \
+            = CreateTerminals("int float identifier string self super".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
         boolean = true_i, false_i, null_i = CreateTerminals("true false null".split())
@@ -28,12 +29,12 @@ class Parser(metaclass=Singleton):
             p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op,\
             p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
             p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
-            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr \
+            p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass \
             = CreateNonTerminals("Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
-                                 "Array ArrayElem MoreArrayElem Type Class ClassMembers Get Set Attribute".split())
+                                 "Array ArrayElem MoreArrayElem Type Class ClassMembers Get Set Attribute SuperClass".split())
 
         e = Epsilon()
 
@@ -50,7 +51,8 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
 
-            p_class > (class_s + identifier + open_b + p_class_members + close_b, lambda x: ClassNode(x[1], x[3])),
+            p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b, lambda x: ClassNode(x[1], x[2], x[4])),
+            p_superclass > (colon + identifier | e, lambda x: x[1], lambda x: None),
             p_class_members > (p_fun_declaration + p_class_members | e, lambda x: [x[0], *x[1]], lambda x: []),
 
             p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + close_b + p_else,
@@ -103,9 +105,9 @@ class Parser(metaclass=Singleton):
                          lambda x: x[0]),
 
             p_set > (p_get + dot + identifier | identifier, lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0])),
-            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self,
+            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super,
                      lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
-                     lambda x: Variable(x[0]), lambda x: SelfNode()),
+                     lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode()),
 
             p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
             p_more_arguments > (comma + p_expression + p_more_arguments | e, lambda x: [x[1], *x[2]], lambda x: []),
@@ -128,6 +130,7 @@ class Parser(metaclass=Singleton):
         self.parser = LR1Parser(grammar, path=path)
         self.mapping = {
             TokenType.SELF: _self,
+            TokenType.SUPER: _super,
             TokenType.IDENTIFIER: identifier,
             TokenType.INTEGER: integer,
             TokenType.FLOAT: _float,
