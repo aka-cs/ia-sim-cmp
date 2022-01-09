@@ -15,14 +15,10 @@ class Function:
 
 class BuiltinFunction:
 
-    def __init__(self, name: str, function: Callable, param_type: [Type], return_type: Type):
+    def __init__(self, name: str, param_type: [Type], return_type: Type):
         self.name = name
-        self.function = function
         self.param_type = param_type
         self.return_type = return_type
-
-    def __call__(self, interpreter, arguments):
-        return self.function(*arguments)
 
     def __str__(self):
         return f"<builtin function {self.name}>"

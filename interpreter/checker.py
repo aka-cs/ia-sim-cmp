@@ -4,7 +4,7 @@ from _parser.nodes import *
 from tokenizer.token_type import TokenType
 from ._types import Float, Int, String, Bool, Null, TypeArray, Object
 from .functions import Function
-from .builtin import builtin_functions
+from .builtin import builtin_functions, builtin_classes
 from .classes import Class
 
 
@@ -13,7 +13,7 @@ class TypeChecker(metaclass=Singleton):
     def __init__(self):
         self.globals = Scope()
         self.scope = self.globals
-        self.types = [Float, Int, String, Bool]
+        self.types = [Float, Int, String, Bool, *builtin_classes]
         self.current_function: Function | None = None
         self.current_class: Class | None = None
         for fun in builtin_functions:
