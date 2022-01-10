@@ -18,9 +18,10 @@ class Class(Type):
         return class_to_return
 
     def get_constructor(cls):
+        params = []
         if "init" in cls.scope.variables:
-            return cls.scope.get("init")
-        return Function(cls.name, [], cls)
+            params = cls.scope.get("init").param_types
+        return Function(cls.name, params, cls)
 
     def __str__(self):
         return self.__qualname__

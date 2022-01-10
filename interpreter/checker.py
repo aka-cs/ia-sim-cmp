@@ -17,7 +17,7 @@ class TypeChecker(metaclass=Singleton):
         self.current_function: Function | None = None
         self.current_class: Class | None = None
         for fun in builtin_functions:
-            self.scope.declare(fun.name, Function(fun.name, fun.param_type, fun.return_type))
+            self.scope.declare(fun.name, Function(fun.name, fun.param_types, fun.return_type))
         for cls in builtin_classes:
             self.scope.declare(cls.name, cls.get_constructor())
 
@@ -120,7 +120,7 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(Variable)
     def check(self, expression: Variable):
-        return self.scope.get(expression.name.text)
+        return self.check_scope(expression.name.text)
 
     @visitor(VarDeclaration)
     def check(self, expression: VarDeclaration):
@@ -183,7 +183,7 @@ class TypeChecker(metaclass=Singleton):
         scope = Scope(self.scope)
         for param in expression.params:
             scope.declare(param[0].text, param[1].check(self))
-        self.current_function = self.scope.get(expression.name.text)
+        self.current_function = self.check_scope(expression.name.text)
         self.check_block(expression.body, scope)
         if not issubclass(self.current_function.return_type, Null) and not self.check_return_paths(expression.body):
             raise Exception("All code paths don't return a value")
@@ -303,6 +303,12 @@ class TypeChecker(metaclass=Singleton):
             if str(t) == name:
                 return t
         raise Exception(f"Class {name} not defined in scope")
+
+    def check_scope(self, name: str):
+        try:
+            return self.scope.get(name)
+        except:
+            return self.globals.get(name)
 
     @staticmethod
     def check_return_paths(body: [Node]):

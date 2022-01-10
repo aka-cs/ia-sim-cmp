@@ -15,9 +15,9 @@ class Function:
 
 class BuiltinFunction:
 
-    def __init__(self, name: str, param_type: [Type], return_type: Type):
+    def __init__(self, name: str, param_types: [Type], return_type: Type):
         self.name = name
-        self.param_type = param_type
+        self.param_types = param_types
         self.return_type = return_type
 
     def __str__(self):

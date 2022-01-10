@@ -3,10 +3,15 @@ from collections import deque
 
 
 class Map:
-    pass
+
+    def __init__(self):
+        pass
 
 
 class Vehicle:
+
+    def __init__(self):
+        pass
 
     def move(self, interval: int):
         pass
