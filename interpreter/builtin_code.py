@@ -1,2 +1,7 @@
+from __future__ import annotations
+
+
 class A:
-    pass
+    a: int
+    b: [int]
+    c: [[float]]

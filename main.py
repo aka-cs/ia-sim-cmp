@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from interpreter.transpiler import Transpiler
-from interpreter.builtin import get_classes_code, get_functions_code
+from interpreter.builtin import get_code
 from regex.regex_ import RegParser
 from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
@@ -33,9 +33,5 @@ if __name__ == '__main__':
         f.write('\n'.join(python_code))
 
     with open('out/builtin_code.py', 'w') as f:
-        for lines, _ in get_classes_code():
-            f.write("".join(lines))
-            f.write("\n")
-        for lines, _ in get_functions_code():
-            f.write("".join(lines))
-            f.write("\n")
+        for line in get_code("interpreter/builtin_code.py"):
+            f.write(line)
