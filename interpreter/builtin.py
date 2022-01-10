@@ -1,10 +1,14 @@
 import inspect
 
 from . import builtin_code
+from .builtin_code import *
 from .functions import BuiltinFunction
 from ._types import Object, Null, Int, Float, Bool, String, TypeArray
 from .classes import Class
 from .scope import Scope
+
+
+type_map = {int: Int, float: Float, object: Object, bool: Bool, str: String, None: Null}
 
 
 def get_type(_type: str | type):
@@ -12,7 +16,6 @@ def get_type(_type: str | type):
         if _type[0] == "[" and _type[-1] == "]":
             return TypeArray(get_type(_type[1:-1]))
         _type = eval(_type)
-    type_map = {int: Int, float: Float, object: Object, bool: Bool, str: String, None: Null}
     return type_map.get(_type, _type)
 
 
@@ -23,6 +26,8 @@ def get_classes(module=builtin_code) -> [Class]:
         if _class[1].__module__ != module.__name__:
             continue
         scope = Scope()
+        c_class = Class(_class[0], None, scope)
+        type_map[_class[1]] = c_class
         for function in inspect.getmembers(_class[1], inspect.isfunction):
             function_name = function[0] if function[0] != "__init__" else "init"
             scope.declare(function_name, get_builtin_function(function))
@@ -30,14 +35,16 @@ def get_classes(module=builtin_code) -> [Class]:
             _type = get_type(_class[1].__annotations__[var])
             scope.declare(var, _type)
         super_class = _class[1].__base__ if _class[1].__base__ != object else None
-        result.append(Class(_class[0], super_class, scope))
+        c_class.super_class = super_class
+        c_class.scope = scope
+        result.append(c_class)
     return result
 
 
 def get_builtin_function(function) -> BuiltinFunction:
-    annotations = inspect.get_annotations(function[1])
-    params = [get_type(annotations[var]) for var in annotations if var != 'return']
-    return BuiltinFunction(function[0], params, get_type(annotations.get('return', None)))
+    _annotations = inspect.get_annotations(function[1])
+    params = [get_type(_annotations[var]) for var in _annotations if var != 'return']
+    return BuiltinFunction(function[0], params, get_type(_annotations.get('return', None)))
 
 
 def get_functions(module=builtin_code) -> [BuiltinFunction]:
@@ -57,9 +64,9 @@ def get_code(file: str) -> [str]:
     return lines
 
 
+builtin_classes: [Class] = [*get_classes()]
+
 builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("print", [Object], Null),
     *get_functions()
 ]
-
-builtin_classes: [Class] = [*get_classes()]

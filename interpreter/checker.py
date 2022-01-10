@@ -18,6 +18,8 @@ class TypeChecker(metaclass=Singleton):
         self.current_class: Class | None = None
         for fun in builtin_functions:
             self.scope.declare(fun.name, Function(fun.name, fun.param_type, fun.return_type))
+        for cls in builtin_classes:
+            self.scope.declare(cls.name, cls.get_constructor())
 
     def start(self, expressions: [Node]):
         self.check_functions_in_scope(self.scope, expressions)
@@ -216,12 +218,13 @@ class TypeChecker(metaclass=Singleton):
     @visitor(ClassNode)
     def check(self, expression: ClassNode):
         scope = Scope(self.scope)
-        self.check_functions_in_scope(scope, expression.methods)
         if expression.superclass:
             super_class = self.get_class(expression.superclass.text)
         else:
             super_class = None
         created = Class(expression.name.text, super_class, scope)
+        self.types.append(created)
+        self.check_functions_in_scope(scope, expression.methods)
         params = []
         try:
             init = getattr(created, "init")
@@ -231,7 +234,6 @@ class TypeChecker(metaclass=Singleton):
         except TypeError:
             pass
         self.current_class = created
-        self.types.append(created)
         self.scope.declare(expression.name.text, Function(created.name, params, created))
         expression.methods.sort(key=lambda x: {"init": 0}.get(x.name.text, 1))
         self.check_block(expression.methods, scope)

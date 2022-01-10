@@ -1,6 +1,7 @@
-from ._types import Type, Object
+from ._types import Type, Object, Null
 from typing import Optional
 from .scope import Scope
+from .functions import Function
 
 
 class Class(Type):
@@ -15,6 +16,11 @@ class Class(Type):
         class_to_return.name = name
         class_to_return.scope = scope
         return class_to_return
+
+    def get_constructor(cls):
+        if "init" in cls.scope.variables:
+            return cls.scope.get("init")
+        return Function(cls.name, [], cls)
 
     def __str__(self):
         return self.__qualname__
