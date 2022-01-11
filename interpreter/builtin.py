@@ -19,24 +19,32 @@ def get_type(_type: str | type):
     return type_map.get(_type, _type)
 
 
-def get_classes(module=builtin_code) -> [Class]:
+def get_classes_in_module(module) -> [type]:
     classes = inspect.getmembers(module, inspect.isclass)
     result = []
     for _class in classes:
-        if _class[1].__module__ != module.__name__:
-            continue
+        if _class[1].__module__ == module.__name__:
+            result.append(_class)
+    return result
+
+
+def get_classes(module=builtin_code) -> [Class]:
+    classes = get_classes_in_module(module)
+    result = []
+    for _class in classes:
         scope = Scope()
         c_class = Class(_class[0], None, scope)
         type_map[_class[1]] = c_class
+    for _class in classes:
+        c_class = type_map[_class[1]]
         for function in inspect.getmembers(_class[1], inspect.isfunction):
             function_name = function[0] if function[0] != "__init__" else "init"
-            scope.declare(function_name, get_builtin_function(function))
+            c_class.scope.declare(function_name, get_builtin_function(function))
         for var in _class[1].__annotations__:
             _type = get_type(_class[1].__annotations__[var])
-            scope.declare(var, _type)
+            c_class.scope.declare(var, _type)
         super_class = _class[1].__base__ if _class[1].__base__ != object else None
         c_class.super_class = super_class
-        c_class.scope = scope
         result.append(c_class)
     return result
 

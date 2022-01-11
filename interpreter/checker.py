@@ -238,6 +238,7 @@ class TypeChecker(metaclass=Singleton):
         expression.methods.sort(key=lambda x: {"init": 0}.get(x.name.text, 1))
         self.check_block(expression.methods, scope)
         self.current_class = None
+        self.check_class_inheritance(created)
 
     @visitor(SelfNode)
     def check(self, _):
@@ -309,6 +310,32 @@ class TypeChecker(metaclass=Singleton):
             return self.scope.get(name)
         except:
             return self.globals.get(name)
+
+    @staticmethod
+    def check_class_inheritance(cls):
+        if not isinstance(cls.__base__, Class):
+            return
+        for member in cls.scope.variables:
+            current = cls.scope.variables[member]
+            if isinstance(current, Function):
+                try:
+                    function = cls.scope.father.get(member)
+                except:
+                    continue
+                if len(function.param_types) != len(current.param_types):
+                    raise TypeError("Function must have same number of arguments as in parent class")
+                for i, j in zip(current.param_types, function.param_types):
+                    if not TypeChecker.can_assign(i, j):
+                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, not {i}")
+                if not TypeChecker.can_assign(current.return_type, function.return_type):
+                    raise TypeError(f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
+            else:
+                try:
+                    variable = cls.scope.father.get(member)
+                except:
+                    continue
+                if not TypeChecker.can_assign(current, variable):
+                    raise TypeError(f"Variable {member} defined in parent class as {variable} type, not {current}")
 
     @staticmethod
     def check_return_paths(body: [Node]):
