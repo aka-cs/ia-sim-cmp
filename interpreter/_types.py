@@ -1,3 +1,6 @@
+from .functions import Function
+
+
 class Type(type):
 
     def __add__(self, other):
@@ -218,22 +221,24 @@ class Bool(Object, metaclass=TypeBool):
         return str(self.value).lower()
 
 
-class TypeArray(Type):
+class TypeList(Type):
 
-    def __new__(mcs, array_type):
-        mcs.array_type = array_type
-        return super().__new__(mcs, "Array", (Array,), {'array_type': array_type})
+    def __new__(mcs, list_type):
+        mcs.list_type = list_type
+        mcs.append = Function("append", [list_type], Null)
+        mcs.remove = Function("remove", [list_type], Null)
+        return super().__new__(mcs, "List", (List,), {'list_type': list_type})
 
     def __getitem__(cls, item):
         if not issubclass(item, Int):
             raise TypeError("Index must be an integer")
-        return cls.array_type
+        return cls.list_type
 
     def __str__(self):
-        return f"array<{self.array_type}>"
+        return f"list<{self.list_type}>"
 
 
-class Array(Object):
+class List(Object):
 
     def __init__(self, value):
         super().__init__()

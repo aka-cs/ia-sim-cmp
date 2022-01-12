@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from typing import Callable
 from _parser.nodes import FunctionNode
 from interpreter.scope import Scope
-from ._types import Type
 
 
 class Function:
 
-    def __init__(self, name, param_types: [Type], return_type: Type):
+    def __init__(self, name, param_types, return_type):
         self.name = name
         self.param_types = param_types
         self.return_type = return_type
@@ -15,7 +13,7 @@ class Function:
 
 class BuiltinFunction:
 
-    def __init__(self, name: str, param_types: [Type], return_type: Type):
+    def __init__(self, name: str, param_types, return_type):
         self.name = name
         self.param_types = param_types
         self.return_type = return_type

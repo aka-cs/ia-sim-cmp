@@ -96,9 +96,7 @@ class Parser(metaclass=Singleton):
             p_comparison > (p_comparison + p_comparison_op + p_term | p_term, lambda x: Binary(*x), lambda x: x[0]),
             p_term > (p_term + p_term_op + p_factor | p_factor, lambda x: Binary(*x), lambda x: x[0]),
             p_factor > (p_factor + p_factor_op + p_unary | p_unary, lambda x: Binary(*x), lambda x: x[0]),
-            p_unary > (p_unary_op + p_unary | p_index, lambda x: Unary(*x), lambda x: x[0]),
-            p_index > (
-                p_call | p_call + open_br + p_expression + close_br, lambda x: x[0], lambda x: Index(x[0], x[2])),
+            p_unary > (p_unary_op + p_unary | p_call, lambda x: Unary(*x), lambda x: x[0]),
             p_call > (p_primary | p_get,
                       lambda x: x[0],
                       lambda x: x[0]),
@@ -112,10 +110,12 @@ class Parser(metaclass=Singleton):
                          lambda x: Grouping(x[1]),
                          lambda x: x[0]),
 
-            p_set > (p_get + dot + identifier | identifier, lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0])),
-            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super,
+            p_set > (p_get + dot + identifier | identifier | p_index,
+                     lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0]), lambda x: x[0]),
+            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super | p_index,
                      lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
-                     lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode()),
+                     lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode(), lambda x: x[0]),
+            p_index > (p_call + open_br + p_expression + close_br, lambda x: Index(x[0], x[2])),
 
             p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
             p_more_arguments > (comma + p_expression + p_more_arguments | e, lambda x: [x[1], *x[2]], lambda x: []),

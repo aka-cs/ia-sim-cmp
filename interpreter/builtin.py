@@ -3,7 +3,7 @@ import inspect
 from . import builtin_code
 from .builtin_code import *
 from .functions import BuiltinFunction
-from ._types import Object, Null, Int, Float, Bool, String, TypeArray
+from ._types import Object, Null, Int, Float, Bool, String, TypeList
 from .classes import Class
 from .scope import Scope
 
@@ -14,7 +14,7 @@ type_map = {int: Int, float: Float, object: Object, bool: Bool, str: String, Non
 def get_type(_type: str | type):
     if isinstance(_type, str):
         if _type[0] == "[" and _type[-1] == "]":
-            return TypeArray(get_type(_type[1:-1]))
+            return TypeList(get_type(_type[1:-1]))
         _type = eval(_type)
     return type_map.get(_type, _type)
 

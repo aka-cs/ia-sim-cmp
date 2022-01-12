@@ -2,7 +2,7 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeArray, Object
+from ._types import Float, Int, String, Bool, Null, TypeList, Object
 from .functions import Function
 from .builtin import builtin_functions, builtin_classes
 from .classes import Class
@@ -56,16 +56,16 @@ class TypeChecker(metaclass=Singleton):
         for elem in expression.expressions:
             result.append(elem.check(self))
         if not result:
-            return TypeArray(None)
-        array_type = result[0]
+            return TypeList(None)
+        list_type = result[0]
         for elem in result:
-            if self.can_assign(elem, array_type):
+            if self.can_assign(elem, list_type):
                 continue
-            elif self.can_assign(array_type, elem):
-                array_type = elem
+            elif self.can_assign(list_type, elem):
+                list_type = elem
             else:
-                raise TypeError(f"Array elements are not of the same type")
-        return TypeArray(array_type)
+                raise TypeError(f"List elements are not of the same type")
+        return TypeList(list_type)
 
     @visitor(Index)
     def check(self, expression: Index):
@@ -138,8 +138,8 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(VarType)
     def check(self, expression: VarType):
-        if expression.type.text == "array":
-            return TypeArray(expression.nested.check(self))
+        if expression.type.text == "list":
+            return TypeList(expression.nested.check(self))
         for t in self.types:
             if expression.type.text == str(t):
                 return t
@@ -161,6 +161,8 @@ class TypeChecker(metaclass=Singleton):
     @visitor(Call)
     def check(self, expression: Call):
         called: Function = expression.called.check(self)
+        if not isinstance(called, Function):
+            raise TypeError()
         if len(expression.arguments) != len(called.param_types):
             raise Exception("Invalid number of arguments")
         for arg, param in zip(expression.arguments, called.param_types):
@@ -351,8 +353,8 @@ class TypeChecker(metaclass=Singleton):
     def can_assign(type1, type2):
         if isinstance(type1, Function) or isinstance(type2, Function):
             raise TypeError()
-        if isinstance(type1, TypeArray) and isinstance(type2, TypeArray):
-            if type1.array_type is None:
+        if isinstance(type1, TypeList) and isinstance(type2, TypeList):
+            if type1.list_type is None:
                 return True
-            return TypeChecker.can_assign(type1.array_type, type2.array_type)
+            return TypeChecker.can_assign(type1.list_type, type2.list_type)
         return issubclass(type1, type2)

@@ -4,7 +4,7 @@ from tools import visitor
 from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
 from .builtin import builtin_functions
-from ._types import Float, Int, String, Bool, Null, Array
+from ._types import Float, Int, String, Bool, Null, List
 
 
 class Transpiler:
