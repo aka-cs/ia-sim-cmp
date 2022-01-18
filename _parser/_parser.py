@@ -53,8 +53,10 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
 
-            p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b,
-                       lambda x: ClassNode(x[1], x[2], x[4])),
+            p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b |
+                       identifier + colon + colon + identifier + open_b + p_class_members + close_b,
+                       lambda x: ClassNode(x[1], x[2], x[4]),
+                       lambda x: ClassNode(x[3], x[0], x[5])),
             p_superclass > (colon + identifier | e, lambda x: x[1], lambda x: None),
             p_class_members > (p_fun_declaration + p_class_members | e, lambda x: [x[0], *x[1]], lambda x: []),
 

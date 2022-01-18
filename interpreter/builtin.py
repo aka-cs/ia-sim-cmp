@@ -23,8 +23,7 @@ def get_classes_in_module(module) -> [type]:
     classes = inspect.getmembers(module, inspect.isclass)
     result = []
     for _class in classes:
-        if _class[1].__module__ == module.__name__:
-            result.append(_class)
+        result.append(_class)
     return result
 
 

@@ -9,24 +9,33 @@ class Event:
     time: int
 
 
-class Environment:
+@dataclass
+class Position:
+    x: int
+    y: int
 
-    def __init__(self):
-        pass
+
+@dataclass
+class Cargo:
+    position: Position
+
+
+@dataclass
+class Environment:
 
     def get_state(self):
         pass
 
-    def update_state(self, time: int) -> [Event]:
-        return []
-
-
-class Vehicle:
-
-    def __init__(self):
+    def update_state(self, event: Event) -> [Event]:
         pass
 
-    def move(self, env: Environment, time: int) -> Event:
+
+@dataclass
+class Vehicle:
+    position: Position
+    path: [Position]
+
+    def update_state(self, env: Environment, time: int) -> Event:
         pass
 
     def get_pos(self):
@@ -43,4 +52,4 @@ def start(vehicle: Vehicle, env: Environment, total_time: int):
         for event in env.update_state(time):
             heapq.heappush(events, event)
         vehicle.report_state()
-        heapq.heappush(events, vehicle.move(env, time))
+        heapq.heappush(events, vehicle.update_state(env, time))
