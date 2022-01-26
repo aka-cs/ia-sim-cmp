@@ -2,7 +2,7 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeList, Object, TypeDict
+from ._types import Float, Int, String, Bool, Null, TypeList, Object, TypeDict, Type
 from .functions import Function
 from .builtin import builtin_functions, builtin_classes
 from .classes import Class
@@ -142,6 +142,9 @@ class TypeChecker(metaclass=Singleton):
                     f"Variable {expression.name.text} of type {expression.type.type.text} can't be assigned {expression_type}")
             expression_type = variable_type
         else:
+            if isinstance(expression_type, Function):
+                raise TypeError(
+                    f"Variable {expression.name.text} can't be assigned {expression_type}")
             if issubclass(expression_type, Null):
                 raise TypeError("Can't infer type of null")
         self.scope.declare(expression.name.text, expression_type)
@@ -178,6 +181,8 @@ class TypeChecker(metaclass=Singleton):
             raise Exception("Invalid number of arguments")
         for arg, param in zip(expression.arguments, called.param_types):
             arg_type = arg.check(self)
+            if param is Type and isinstance(arg_type, Function):
+                continue
             if not self.can_assign(arg_type, param):
                 raise TypeError(f"Function with argument type {param} can't receive {arg_type}")
         return called.return_type
