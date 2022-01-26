@@ -4,11 +4,12 @@ from tokenizer.token_type import TokenType
 matches = [
     TokenMatcher(r'self', TokenType.SELF),
     TokenMatcher(r'super', TokenType.SUPER),
-    TokenMatcher(r'-?\d+', TokenType.INTEGER),
-    TokenMatcher(r'-?\d+(.\d+)?', TokenType.FLOAT),
+    TokenMatcher(r'\d+', TokenType.INTEGER),
+    TokenMatcher(r'\d+(.\d+)?', TokenType.FLOAT),
     TokenMatcher(r'"([^"]|\\")*[^\\]?"', TokenType.STRING),  # Regex is not prepared for strings yet
     TokenMatcher(r'\+', TokenType.PLUS),
     TokenMatcher(r'\-', TokenType.MINUS),
+    TokenMatcher(r'!', TokenType.EXCLAMATION),
     TokenMatcher(r'\*', TokenType.MULTIPLY),
     TokenMatcher(r'\/', TokenType.DIVIDE),
     TokenMatcher(r'\(', TokenType.OPEN_PARENTHESIS),

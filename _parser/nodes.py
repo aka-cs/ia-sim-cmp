@@ -16,7 +16,15 @@ class Node:
 
 @dataclass
 class ArrayNode(Node):
+    start: Token
     expressions: [Node]
+
+
+@dataclass
+class DictionaryNode(Node):
+    start: Token
+    keys: [Node]
+    values: [Node]
 
 
 @dataclass
@@ -29,6 +37,7 @@ class Index(Node):
 class VarType(Node):
     type: Token
     nested: Optional['VarType'] = None
+    s_nested: Optional['VarType'] = None
 
 
 @dataclass

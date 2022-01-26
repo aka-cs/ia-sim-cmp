@@ -2,6 +2,8 @@ import os
 import pickle
 from abc import abstractmethod
 from enum import Enum, auto
+from errors import UnexpectedToken
+
 
 from lr_parser.grammar import Grammar
 
@@ -54,7 +56,7 @@ class ShiftReduceParser:
             try:
                 action, tag = self.action[state, lookahead]
             except KeyError as k:
-                raise Exception(k)
+                raise UnexpectedToken(cursor)
             
             if self.logs:
                 print(action, tag)

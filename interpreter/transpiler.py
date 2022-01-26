@@ -29,7 +29,8 @@ class Transpiler:
         tabs_str = '\t' * tabs
         result = statement.code.eval(self, tabs=tabs)
         if result:
-            self.lines.append(f"{tabs_str}{result}")
+            for line in result.split("\n"):
+                self.lines.append(f"{tabs_str}{line}")
 
     @visitor(Literal)
     def eval(self, literal: Literal, tabs: int = 0):
@@ -41,6 +42,12 @@ class Transpiler:
         for elem in expression.expressions:
             result.append(elem.eval(self))
         return '[' + ', '.join(result) + ']'
+
+    @visitor(DictionaryNode)
+    def eval(self, expression: DictionaryNode, tabs: int = 0):
+        keys = [k.eval(self) for k in expression.keys]
+        values = [v.eval(self) for v in expression.values]
+        return "{" + ', '.join([f"{x[0]}: {x[1]}" for x in zip(keys, values)]) + "}"
 
     @visitor(Index)
     def eval(self, expression: Index, tabs: int = 0):
@@ -96,11 +103,11 @@ class Transpiler:
 
     @visitor(VarDeclaration)
     def eval(self, declaration: VarDeclaration, tabs: int = 0):
-        return f"{declaration.name.text} = {declaration.expression.eval(self)}"
+        return f"{declaration.name.text} = {declaration.expression.eval(self, tabs=tabs)}"
 
     @visitor(Assignment)
     def eval(self, assignment: Assignment, tabs: int = 0):
-        return f"{assignment.left.eval(self)} = {assignment.value.eval(self)}"
+        return f"{assignment.left.eval(self)} = {assignment.value.eval(self, tabs=tabs)}"
 
     @visitor(ExpressionStatement)
     def eval(self, expression: ExpressionStatement, tabs: int = 0):
