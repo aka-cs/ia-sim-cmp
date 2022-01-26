@@ -25,6 +25,12 @@ class TokenMatcher:
     @automata.setter
     def automata(self, automata):
         self._automata = automata
+        
+    def __hash__(self):
+        return hash((self.regex, self.token_type))
+    
+    def __eq__(self, other):
+        return isinstance(other, TokenMatcher) and self.regex == other.regex and self.token_type == other.token_type
 
 
 class Tokenizer:
@@ -32,8 +38,10 @@ class Tokenizer:
         loaded = False
         if path:
             try:
-                self.automata = pickle.load(open(f'{path}/tokenizer_automata.pkl', 'rb'))
-                loaded = True
+                old_token_matchers = pickle.load(open(f'{path}/token_matchers.pkl', 'rb'))
+                if old_token_matchers == token_matchers:
+                    self.automata = pickle.load(open(f'{path}/tokenizer_automata.pkl', 'rb'))
+                    loaded = True
             except FileNotFoundError:
                 pass
         if not loaded:
@@ -44,6 +52,7 @@ class Tokenizer:
             if path:
                 os.makedirs(path, exist_ok=True)
                 pickle.dump(self.automata, open(f'{path}/tokenizer_automata.pkl', 'wb'))
+                pickle.dump(self.token_matchers, open(f'{path}/token_matchers.pkl', 'wb'))
 
     def tokenize(self, program: str) -> [Token]:
         return self.automata_tokenize(program)
