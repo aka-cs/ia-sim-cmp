@@ -24,6 +24,21 @@ class Transpiler:
         self.lines.append("if __name__ == '__main__':\n\tmain()\n")
         return self.lines
 
+    @visitor(SwitchNode)
+    def eval(self, statement: SwitchNode, tabs: int = 0):
+        tabs_string = "\t"*tabs
+        self.lines.append(f"{tabs_string}match {statement.variable.text}:")
+        for i in statement.switch_cases:
+            self.lines.append(f"{tabs_string}\tcase {i.text}():")
+            if not statement.switch_cases[i]:
+                self.lines.append(f"{tabs_string}\t\tpass")
+            for j in statement.switch_cases[i]:
+                j.eval(self, tabs=tabs+2)
+        if statement.default:
+            self.lines.append(f"{tabs_string}\tcase _:")
+            for i in statement.default:
+                i.eval(self, tabs=tabs+2)
+
     @visitor(Statement)
     def eval(self, statement: Statement, tabs: int = 0):
         tabs_str = '\t' * tabs
@@ -177,6 +192,8 @@ class Transpiler:
     def eval(self, expression: If, tabs: int = 0):
         tabs_str = '\t' * tabs
         self.lines.append(f'{tabs_str}if {expression.condition.eval(self)}:')
+        if not expression.code:
+            self.lines.append(f'{tabs_str}\tpass')
         self.eval_block(expression.code, tabs + 1)
         if expression.else_code:
             self.lines.append(f'{tabs_str}else:')
@@ -186,6 +203,8 @@ class Transpiler:
     def eval(self, expression: While, tabs: int = 0):
         tabs_str = '\t' * tabs
         self.lines.append(f'{tabs_str}while {expression.condition.eval(self)}:')
+        if not expression.code:
+            self.lines.append(f'{tabs_str}\tpass')
         self.eval_block(expression.code, tabs + 1)
 
     def eval_block(self, statements, tabs: int = 0):

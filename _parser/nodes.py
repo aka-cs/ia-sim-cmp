@@ -9,7 +9,7 @@ class Node:
 
     def check(self, checker):
         return checker.check(self)
-    
+
     def eval(self, transpiler, **kwargs):
         return transpiler.eval(self, **kwargs)
 
@@ -151,3 +151,10 @@ class AttrDeclaration(Node):
     name: Token
     type: VarType
     expression: Node
+
+
+@dataclass
+class SwitchNode(Node):
+    variable: Token
+    switch_cases: {Token: [Node]}
+    default: [Node]

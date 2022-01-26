@@ -293,6 +293,19 @@ class TypeChecker(metaclass=Singleton):
                 raise TypeError("Can't infer type of null")
         self.current_class.scope.declare(expression.name.text, expression_type)
 
+    @visitor(SwitchNode)
+    def check(self, expression: SwitchNode):
+        var = expression.variable.text
+        var_type = self.scope.get(var)
+        for _case in expression.switch_cases:
+            c_type = self.get_class(_case.text)
+            if not self.can_assign(var_type, c_type) and not self.can_assign(c_type, var_type):
+                raise TypeError(f"Can't cast {var_type} to {c_type}")
+            scope = Scope(self.scope)
+            scope.declare(var, c_type)
+            self.check_block(expression.switch_cases[_case], scope)
+        self.check_block(expression.default, self.scope)
+
     def check_block(self, statements, scope: Scope):
         previous = self.scope
         try:

@@ -55,6 +55,9 @@ class TokenType(Enum):
     AND = auto()
     OR = auto()
     SELF = auto()
+    SWITCH = auto()
+    CASE = auto()
+    DEFAULT = auto()
 
     # End of File
     EOF = auto()

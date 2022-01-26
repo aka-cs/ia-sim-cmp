@@ -14,8 +14,8 @@ class Parser(metaclass=Singleton):
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
-        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr \
-            = CreateTerminals("if else while fun var return class attr".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr, switch, case, default \
+            = CreateTerminals("if else while fun var return class attr switch case default".split())
         specials = integer, _float, identifier, string, _self, _super \
             = CreateTerminals("int float identifier string self super".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
@@ -30,13 +30,14 @@ class Parser(metaclass=Singleton):
               p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
               p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
               p_array, p_array_elem, p_more_array_elem, p_dict, p_dict_elem, p_more_dict_elem, \
-              p_types, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass \
+              p_types, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass, \
+              p_switch, p_cases, p_default \
             = CreateNonTerminals("Program Functions Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
                                  "Array ArrayElem MoreArrayElem Dict DictElem MoreDictElem Types Type Class "
-                                 "ClassMembers Get Set Attribute SuperClass".split())
+                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default".split())
 
         e = Epsilon()
 
@@ -46,7 +47,8 @@ class Parser(metaclass=Singleton):
             p_functions > (p_fun_declaration + p_functions | e,
                            lambda x: [Statement(x[0]), *x[1]], lambda x: []),
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr,
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch,
+                           lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -54,6 +56,12 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
+
+            p_switch > (switch + identifier + colon + case + identifier + open_b + p_statements + close_b + p_cases + p_default,
+                        lambda x: SwitchNode(x[1], {x[4]: x[6], **x[8]}, x[9])),
+            p_cases > (case + identifier + open_b + p_statements + close_b + p_cases | e,
+                       lambda x: {x[1]: x[3], **x[5]}, lambda x: dict()),
+            p_default > (default + open_b + p_statements + close_b | e, lambda x: x[2], lambda x: []),
 
             p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b |
                        identifier + colon + colon + identifier + open_b + p_class_members + close_b,
@@ -192,6 +200,9 @@ class Parser(metaclass=Singleton):
             TokenType.DOT: dot,
             TokenType.COLON: colon,
             TokenType.SEMICOLON: semicolon,
+            TokenType.SWITCH: switch,
+            TokenType.CASE: case,
+            TokenType.DEFAULT: default,
             TokenType.EOF: self.parser.G.EOF
         }
 
