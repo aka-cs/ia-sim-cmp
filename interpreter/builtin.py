@@ -3,12 +3,12 @@ import inspect
 from . import builtin_code
 from .builtin_code import *
 from .functions import BuiltinFunction
-from ._types import Object, Null, Int, Float, Bool, String, TypeList, TypeDict, Type, List
+from ._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
 from .classes import Class
 from .scope import Scope
 
 
-type_map = {type: Type, int: Int, float: Float, object: Object, bool: Bool, str: String, None: Null}
+type_map = {type: Type, int: Int, float: Float, object: Object, bool: Boolean, str: String, None: Null}
 
 
 def get_type(_type: str | type):
@@ -80,6 +80,6 @@ builtin_classes: [Class] = [*get_classes()]
 builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("print", [Object], Null),
     BuiltinFunction("len", [List], Int),
-    BuiltinFunction("isinstance", [Object, Type], Bool),
+    BuiltinFunction("isinstance", [Object, Type], Boolean),
     *get_functions()
 ]

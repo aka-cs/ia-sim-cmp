@@ -4,7 +4,7 @@ from tools import visitor
 from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
 from .builtin import builtin_functions
-from ._types import Float, Int, String, Bool, Null, List
+from ._types import Float, Int, String, Boolean, Null, List
 
 
 class Transpiler:
@@ -206,6 +206,10 @@ class Transpiler:
         if not expression.code:
             self.lines.append(f'{tabs_str}\tpass')
         self.eval_block(expression.code, tabs + 1)
+
+    @visitor(CommentNode)
+    def eval(self, expression: CommentNode, tabs: int = 0):
+        return '#' + expression.text[2:]
 
     def eval_block(self, statements, tabs: int = 0):
         for statement in statements:

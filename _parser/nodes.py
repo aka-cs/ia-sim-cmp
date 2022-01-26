@@ -158,3 +158,8 @@ class SwitchNode(Node):
     variable: Token
     switch_cases: {Token: [Node]}
     default: [Node]
+
+
+@dataclass
+class CommentNode(Node):
+    text: str

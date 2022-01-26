@@ -21,8 +21,10 @@ class Parser(metaclass=Singleton):
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
         boolean = true_i, false_i, null_i = CreateTerminals("true false null".split())
-
-        terminals = [symbol, *operators, *comparison, *logic, *statements, *specials, *grouping, *punctuation, *boolean]
+        comment = Terminal("comment")
+        
+        terminals = [symbol, *operators, *comparison, *logic, *statements,
+                     *specials, *grouping, *punctuation, *boolean, comment]
 
         non_terminals \
             = p_program, p_functions, p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg, \
@@ -31,13 +33,13 @@ class Parser(metaclass=Singleton):
               p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
               p_array, p_array_elem, p_more_array_elem, p_dict, p_dict_elem, p_more_dict_elem, \
               p_types, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass, \
-              p_switch, p_cases, p_default \
+              p_switch, p_cases, p_default, p_comment \
             = CreateNonTerminals("Program Functions Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
                                  "Array ArrayElem MoreArrayElem Dict DictElem MoreDictElem Types Type Class "
-                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default".split())
+                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default Comment".split())
 
         e = Epsilon()
 
@@ -47,7 +49,8 @@ class Parser(metaclass=Singleton):
             p_functions > (p_fun_declaration + p_functions | e,
                            lambda x: [Statement(x[0]), *x[1]], lambda x: []),
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch,
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch | p_comment,
+                           lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -56,6 +59,8 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
+            
+            p_comment > (comment, lambda x: CommentNode(x[0].text)),
 
             p_switch > (switch + identifier + colon + case + identifier + open_b + p_statements + close_b + p_cases + p_default,
                         lambda x: SwitchNode(x[1], {x[4]: x[6], **x[8]}, x[9])),
@@ -203,6 +208,7 @@ class Parser(metaclass=Singleton):
             TokenType.SWITCH: switch,
             TokenType.CASE: case,
             TokenType.DEFAULT: default,
+            TokenType.COMMENT: comment,
             TokenType.EOF: self.parser.G.EOF
         }
 

@@ -41,7 +41,7 @@ class Type(type):
         raise AttributeNotFound(f"{self} has no attribute {item}")
 
     def __str__(self):
-        return self.__qualname__.lower()
+        return self.__qualname__
 
 
 class Object(metaclass=Type):
@@ -73,7 +73,7 @@ class TypeNumber(Type):
 
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
-            return Bool
+            return Boolean
         raise InvalidOperation(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
@@ -114,22 +114,22 @@ class Float(Object, metaclass=TypeNumber):
         return Float(-self.value)
 
     def __eq__(self, other):
-        return Bool(self.value == other.value)
+        return Boolean(self.value == other.value)
 
     def __ne__(self, other):
-        return Bool(self.value != other.value)
+        return Boolean(self.value != other.value)
 
     def __lt__(self, other):
-        return Bool(self.value < other.value)
+        return Boolean(self.value < other.value)
 
     def __gt__(self, other):
-        return Bool(self.value > other.value)
+        return Boolean(self.value > other.value)
 
     def __le__(self, other):
-        return Bool(self.value <= other.value)
+        return Boolean(self.value <= other.value)
 
     def __ge__(self, other):
-        return Bool(self.value >= other.value)
+        return Boolean(self.value >= other.value)
 
     def __str__(self):
         return str(self.value)
@@ -179,7 +179,7 @@ class TypeString(Type):
 
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
-            return Bool
+            return Boolean
         raise InvalidOperation(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
@@ -196,10 +196,10 @@ class String(Object, metaclass=TypeString):
         return String(self.value + other.value)
 
     def __eq__(self, other):
-        return Bool(self.value == other.value)
+        return Boolean(self.value == other.value)
 
     def __ne__(self, other):
-        return Bool(self.value != other.value)
+        return Boolean(self.value != other.value)
 
     def __str__(self):
         return self.value
@@ -209,7 +209,7 @@ class TypeBool(Type):
     pass
 
 
-class Bool(Object, metaclass=TypeBool):
+class Boolean(Object, metaclass=TypeBool):
 
     def __init__(self, value):
         Object.__init__(self)

@@ -4,7 +4,7 @@ from tools import visitor
 from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
 from .builtin import builtin_functions
-from ._types import Float, Int, String, Bool, Null, List
+from ._types import Float, Int, String, Boolean, Null, List
 
 
 class Interpreter:
@@ -28,7 +28,7 @@ class Interpreter:
         if isinstance(literal.value, str):
             return String(literal.value)
         if isinstance(literal.value, bool):
-            return Bool(literal.value)
+            return Boolean(literal.value)
         if literal.value is None:
             return Null()
 

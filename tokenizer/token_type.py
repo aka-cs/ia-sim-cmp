@@ -15,6 +15,7 @@ class TokenType(Enum):
     COLON = auto()
     LINEBREAK = auto()
     SPACE = auto()
+    TAB = auto()
     PLUS = auto()
     MINUS = auto()
     MULTIPLY = auto()
@@ -58,6 +59,9 @@ class TokenType(Enum):
     SWITCH = auto()
     CASE = auto()
     DEFAULT = auto()
+    
+    # Comment
+    COMMENT = auto()
 
     # End of File
     EOF = auto()

@@ -2,7 +2,7 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeList, Object, TypeDict, Type
+from ._types import Float, Int, String, Boolean, Null, TypeList, Object, TypeDict, Type
 from .functions import Function
 from .builtin import builtin_functions, builtin_classes
 from .classes import Class
@@ -14,7 +14,7 @@ class TypeChecker(metaclass=Singleton):
     def __init__(self):
         self.globals = Scope()
         self.scope = self.globals
-        self.types = [Float, Int, String, Bool, *builtin_classes]
+        self.types = [Float, Int, String, Boolean, *builtin_classes]
         self.current_function: Function | None = None
         self.current_class: Class | None = None
         for fun in builtin_functions:
@@ -40,7 +40,7 @@ class TypeChecker(metaclass=Singleton):
     @visitor(Literal)
     def check(self, expression: Literal):
         if isinstance(expression.value, bool):
-            return Bool
+            return Boolean
         if isinstance(expression.value, float):
             return Float
         if isinstance(expression.value, int):
@@ -89,9 +89,9 @@ class TypeChecker(metaclass=Singleton):
         if expression.operator.type == TokenType.MINUS:
             return -right
         elif expression.operator.type == TokenType.EXCLAMATION:
-            if not issubclass(right, Bool):
+            if not issubclass(right, Boolean):
                 raise InvalidOperation(f"Operator ! not supported for {right}", expression.operator)
-            return Bool
+            return Boolean
         return None
 
     @visitor(Binary)
@@ -104,9 +104,9 @@ class TypeChecker(metaclass=Singleton):
             if expression.operator.type == TokenType.EQUAL_DIFFERENT:
                 return left != right
             if expression.operator.type in [TokenType.AND, TokenType.OR]:
-                if not issubclass(left, Bool) or not issubclass(right, Bool):
+                if not issubclass(left, Boolean) or not issubclass(right, Boolean):
                     raise InvalidOperation(f"Operator not supported for types {left} and {right}")
-                return Bool
+                return Boolean
             if expression.operator.type == TokenType.PLUS:
                 return left + right
             if expression.operator.type == TokenType.MINUS:
@@ -222,14 +222,14 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(If)
     def check(self, expression: If):
-        if not issubclass(expression.condition.check(self), Bool):
+        if not issubclass(expression.condition.check(self), Boolean):
             raise TypeError(f"if condition is not a boolean value")
         self.check_block(expression.code, Scope(self.scope))
         self.check_block(expression.else_code, Scope(self.scope))
 
     @visitor(While)
     def check(self, expression: While):
-        if not issubclass(expression.condition.check(self), Bool):
+        if not issubclass(expression.condition.check(self), Boolean):
             raise TypeError(f"while condition is not a boolean value")
         self.check_block(expression.code, Scope(self.scope))
 
@@ -305,6 +305,10 @@ class TypeChecker(metaclass=Singleton):
             scope.declare(var, c_type)
             self.check_block(expression.switch_cases[_case], scope)
         self.check_block(expression.default, self.scope)
+        
+    @visitor(CommentNode)
+    def check(self, expression: CommentNode):
+        pass
 
     def check_block(self, statements, scope: Scope):
         previous = self.scope

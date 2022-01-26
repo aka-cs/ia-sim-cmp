@@ -79,6 +79,10 @@ class Tokenizer:
             if token_type == TokenType.SPACE:
                 column += 1
                 continue
+
+            if token_type == TokenType.TAB:
+                column += 4
+                continue
             
             tokens.append(Token(line, column, token_type, match))
             column += length
