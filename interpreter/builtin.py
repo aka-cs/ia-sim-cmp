@@ -3,7 +3,7 @@ import inspect
 from . import builtin_code
 from .builtin_code import *
 from .functions import BuiltinFunction
-from ._types import Object, Null, Int, Float, Bool, String, TypeList
+from ._types import Object, Null, Int, Float, Bool, String, TypeList, List
 from .classes import Class
 from .scope import Scope
 
@@ -75,5 +75,9 @@ builtin_classes: [Class] = [*get_classes()]
 
 builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("print", [Object], Null),
+    BuiltinFunction("len", [List], Int),
+    BuiltinFunction("min", [Float, Float], Float),
+    BuiltinFunction("get_inf", [], Float),
+    BuiltinFunction("pow", [Float], Float),
     *get_functions()
 ]
