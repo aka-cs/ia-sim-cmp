@@ -311,6 +311,8 @@ class TypeChecker(metaclass=Singleton):
         var_type = self.scope.get(var)
         for _case in expression.switch_cases:
             c_type = self.get_class(_case.text)
+            if not isinstance(c_type, Class):
+                raise TypeError()
             if not self.can_assign(var_type, c_type) and not self.can_assign(c_type, var_type):
                 raise TypeError(f"Can't cast {var_type} to {c_type}")
             scope = Scope(self.scope)
