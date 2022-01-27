@@ -2,13 +2,13 @@ from tokenizer.tokenizer import TokenMatcher
 from tokenizer.token_type import TokenType
 
 matches = [
-    TokenMatcher(r'self', TokenType.SELF),
-    TokenMatcher(r'super', TokenType.SUPER),
-    TokenMatcher(r'-?\d+', TokenType.INTEGER),
-    TokenMatcher(r'-?\d+(.\d+)?', TokenType.FLOAT),
+    TokenMatcher('//[^\n]*', TokenType.COMMENT),
+    TokenMatcher(r'\d+', TokenType.INTEGER),
+    TokenMatcher(r'\d+(.\d+)?', TokenType.FLOAT),
     TokenMatcher(r'"([^"]|\\")*[^\\]?"', TokenType.STRING),  # Regex is not prepared for strings yet
     TokenMatcher(r'\+', TokenType.PLUS),
     TokenMatcher(r'\-', TokenType.MINUS),
+    TokenMatcher(r'!', TokenType.EXCLAMATION),
     TokenMatcher(r'\*', TokenType.MULTIPLY),
     TokenMatcher(r'\/', TokenType.DIVIDE),
     TokenMatcher(r'\(', TokenType.OPEN_PARENTHESIS),
@@ -23,13 +23,21 @@ matches = [
     TokenMatcher(r'fun', TokenType.FUN),
     TokenMatcher(r'if', TokenType.IF),
     TokenMatcher(r'else', TokenType.ELSE),
+    TokenMatcher(r'for', TokenType.FOR),
     TokenMatcher(r'while', TokenType.WHILE),
     TokenMatcher(r'null', TokenType.NULL),
     TokenMatcher(r'true', TokenType.TRUE),
     TokenMatcher(r'false', TokenType.FALSE),
     TokenMatcher(r'return', TokenType.RETURN),
+    TokenMatcher(r'&&', TokenType.AND),
+    TokenMatcher(r'\|\|', TokenType.OR),
     TokenMatcher(r'and', TokenType.AND),
     TokenMatcher(r'or', TokenType.OR),
+    TokenMatcher('switch', TokenType.SWITCH),
+    TokenMatcher('case', TokenType.CASE),
+    TokenMatcher('default', TokenType.DEFAULT),
+    TokenMatcher(r'self', TokenType.SELF),
+    TokenMatcher(r'super', TokenType.SUPER),
     TokenMatcher(r'>=', TokenType.GREATER_EQUAL),
     TokenMatcher(r'<=', TokenType.LESS_EQUAL),
     TokenMatcher(r'>', TokenType.GREATER),
@@ -42,5 +50,6 @@ matches = [
     TokenMatcher(r';', TokenType.SEMICOLON),
     TokenMatcher(r':', TokenType.COLON),
     TokenMatcher(' ', TokenType.SPACE),
+    TokenMatcher('\t', TokenType.TAB),
     TokenMatcher('\n|\r|\n\r', TokenType.LINEBREAK)
 ]

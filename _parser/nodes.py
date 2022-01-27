@@ -9,14 +9,22 @@ class Node:
 
     def check(self, checker):
         return checker.check(self)
-    
+
     def eval(self, transpiler, **kwargs):
         return transpiler.eval(self, **kwargs)
 
 
 @dataclass
 class ArrayNode(Node):
+    start: Token
     expressions: [Node]
+
+
+@dataclass
+class DictionaryNode(Node):
+    start: Token
+    keys: [Node]
+    values: [Node]
 
 
 @dataclass
@@ -29,6 +37,7 @@ class Index(Node):
 class VarType(Node):
     type: Token
     nested: Optional['VarType'] = None
+    s_nested: Optional['VarType'] = None
 
 
 @dataclass
@@ -142,3 +151,22 @@ class AttrDeclaration(Node):
     name: Token
     type: VarType
     expression: Node
+
+
+@dataclass
+class SwitchNode(Node):
+    variable: Token
+    switch_cases: {Token: [Node]}
+    default: [Node]
+
+
+@dataclass
+class CommentNode(Node):
+    text: str
+
+
+@dataclass
+class ForNode(Node):
+    variable: Token
+    iterable: Node
+    statements: [Node]

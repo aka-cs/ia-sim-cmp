@@ -4,7 +4,7 @@ from tools import visitor
 from .functions import UserDefinedFunction, ReturnCall
 from .scope import Scope
 from .builtin import builtin_functions
-from ._types import Float, Int, String, Bool, Null, List
+from ._types import Float, Int, String, Boolean, Null, List
 
 
 class Transpiler:
@@ -24,12 +24,28 @@ class Transpiler:
         self.lines.append("if __name__ == '__main__':\n\tmain()\n")
         return self.lines
 
+    @visitor(SwitchNode)
+    def eval(self, statement: SwitchNode, tabs: int = 0):
+        tabs_string = "\t"*tabs
+        self.lines.append(f"{tabs_string}match {statement.variable.text}:")
+        for i in statement.switch_cases:
+            self.lines.append(f"{tabs_string}\tcase {i.text}():")
+            if not statement.switch_cases[i]:
+                self.lines.append(f"{tabs_string}\t\tpass")
+            for j in statement.switch_cases[i]:
+                j.eval(self, tabs=tabs+2)
+        if statement.default:
+            self.lines.append(f"{tabs_string}\tcase _:")
+            for i in statement.default:
+                i.eval(self, tabs=tabs+2)
+
     @visitor(Statement)
     def eval(self, statement: Statement, tabs: int = 0):
         tabs_str = '\t' * tabs
         result = statement.code.eval(self, tabs=tabs)
         if result:
-            self.lines.append(f"{tabs_str}{result}")
+            for line in result.split("\n"):
+                self.lines.append(f"{tabs_str}{line}")
 
     @visitor(Literal)
     def eval(self, literal: Literal, tabs: int = 0):
@@ -41,6 +57,12 @@ class Transpiler:
         for elem in expression.expressions:
             result.append(elem.eval(self))
         return '[' + ', '.join(result) + ']'
+
+    @visitor(DictionaryNode)
+    def eval(self, expression: DictionaryNode, tabs: int = 0):
+        keys = [k.eval(self) for k in expression.keys]
+        values = [v.eval(self) for v in expression.values]
+        return "{" + ', '.join([f"{x[0]}: {x[1]}" for x in zip(keys, values)]) + "}"
 
     @visitor(Index)
     def eval(self, expression: Index, tabs: int = 0):
@@ -96,11 +118,11 @@ class Transpiler:
 
     @visitor(VarDeclaration)
     def eval(self, declaration: VarDeclaration, tabs: int = 0):
-        return f"{declaration.name.text} = {declaration.expression.eval(self)}"
+        return f"{declaration.name.text} = {declaration.expression.eval(self, tabs=tabs)}"
 
     @visitor(Assignment)
     def eval(self, assignment: Assignment, tabs: int = 0):
-        return f"{assignment.left.eval(self)} = {assignment.value.eval(self)}"
+        return f"{assignment.left.eval(self)} = {assignment.value.eval(self, tabs=tabs)}"
 
     @visitor(ExpressionStatement)
     def eval(self, expression: ExpressionStatement, tabs: int = 0):
@@ -170,6 +192,8 @@ class Transpiler:
     def eval(self, expression: If, tabs: int = 0):
         tabs_str = '\t' * tabs
         self.lines.append(f'{tabs_str}if {expression.condition.eval(self)}:')
+        if not expression.code:
+            self.lines.append(f'{tabs_str}\tpass')
         self.eval_block(expression.code, tabs + 1)
         if expression.else_code:
             self.lines.append(f'{tabs_str}else:')
@@ -179,7 +203,21 @@ class Transpiler:
     def eval(self, expression: While, tabs: int = 0):
         tabs_str = '\t' * tabs
         self.lines.append(f'{tabs_str}while {expression.condition.eval(self)}:')
+        if not expression.code:
+            self.lines.append(f'{tabs_str}\tpass')
         self.eval_block(expression.code, tabs + 1)
+
+    @visitor(CommentNode)
+    def eval(self, expression: CommentNode, tabs: int = 0):
+        return '#' + expression.text[2:]
+
+    @visitor(ForNode)
+    def eval(self, expression: ForNode, tabs: int = 0):
+        tabs_str = '\t' * tabs
+        self.lines.append(f'{tabs_str}for {expression.variable.text} in {expression.iterable.eval(self)}:')
+        if not expression.statements:
+            self.lines.append(f'{tabs_str}\tpass')
+        self.eval_block(expression.statements, tabs + 1)
 
     def eval_block(self, statements, tabs: int = 0):
         for statement in statements:

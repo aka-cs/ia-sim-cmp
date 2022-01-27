@@ -15,6 +15,7 @@ class TokenType(Enum):
     COLON = auto()
     LINEBREAK = auto()
     SPACE = auto()
+    TAB = auto()
     PLUS = auto()
     MINUS = auto()
     MULTIPLY = auto()
@@ -48,6 +49,7 @@ class TokenType(Enum):
     WHILE = auto()
     IF = auto()
     ELSE = auto()
+    FOR = auto()
     NULL = auto()
     TRUE = auto()
     FALSE = auto()
@@ -55,6 +57,12 @@ class TokenType(Enum):
     AND = auto()
     OR = auto()
     SELF = auto()
+    SWITCH = auto()
+    CASE = auto()
+    DEFAULT = auto()
+    
+    # Comment
+    COMMENT = auto()
 
     # End of File
     EOF = auto()

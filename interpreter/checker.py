@@ -2,10 +2,11 @@ from tools import Singleton, visitor
 from .scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Bool, Null, TypeList, Object
+from ._types import Float, Int, String, Boolean, Null, TypeList, Object, TypeDict, Type
 from .functions import Function
 from .builtin import builtin_functions, builtin_classes
 from .classes import Class
+from errors import *
 
 
 class TypeChecker(metaclass=Singleton):
@@ -13,7 +14,7 @@ class TypeChecker(metaclass=Singleton):
     def __init__(self):
         self.globals = Scope()
         self.scope = self.globals
-        self.types = [Float, Int, String, Bool, *builtin_classes]
+        self.types = [Float, Int, String, Boolean, *builtin_classes]
         self.current_function: Function | None = None
         self.current_class: Class | None = None
         for fun in builtin_functions:
@@ -23,13 +24,13 @@ class TypeChecker(metaclass=Singleton):
 
     def start(self, expressions: [Node]):
         self.check_functions_in_scope(self.scope, expressions)
-        for expression in expressions:
-            expression.check(self)
         if "main" not in self.scope.variables:
-            raise Exception("Program must define a main method")
+            raise MissingMainError()
         main: Function = self.scope.get("main")
         if len(main.param_types) != 0 or not issubclass(main.return_type, Null):
-            raise Exception("main method must return void and take no arguments")
+            raise InvalidMain(main)
+        for expression in expressions:
+            expression.check(self)
         return
 
     @visitor(Statement)
@@ -38,34 +39,51 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(Literal)
     def check(self, expression: Literal):
+        if isinstance(expression.value, bool):
+            return Boolean
         if isinstance(expression.value, float):
             return Float
         if isinstance(expression.value, int):
             return Int
         if isinstance(expression.value, str):
             return String
-        if isinstance(expression.value, bool):
-            return Bool
         if expression.value is None:
             return Null
         return None
 
+    @visitor(ForNode)
+    def check(self, expression: ForNode):
+        scope = Scope(self.scope)
+        iterable = expression.iterable.check(self)
+        if isinstance(iterable, TypeDict):
+            scope.declare(expression.variable.text, iterable.key_type)
+        elif isinstance(iterable, TypeList):
+            scope.declare(expression.variable.text, iterable.list_type)
+        else:
+            raise TypeError("For can only iterate over a list or a dictionary")
+        self.check_block(expression.statements, scope)
+
     @visitor(ArrayNode)
     def check(self, expression: ArrayNode):
-        result = []
-        for elem in expression.expressions:
-            result.append(elem.check(self))
-        if not result:
-            return TypeList(None)
-        list_type = result[0]
-        for elem in result:
-            if self.can_assign(elem, list_type):
-                continue
-            elif self.can_assign(list_type, elem):
-                list_type = elem
-            else:
-                raise TypeError(f"List elements are not of the same type")
+        result = [elem.check(self) for elem in expression.expressions]
+        list_type = self.common_type(result)
+        if issubclass(Object, list_type):
+            raise InvalidTypeError("List elements are not of the same type", expression.start.line)
         return TypeList(list_type)
+
+    @visitor(DictionaryNode)
+    def check(self, expression: DictionaryNode):
+        keys = [elem.check(self) for elem in expression.keys]
+        values = [elem.check(self) for elem in expression.values]
+        keys_types = self.common_type(keys)
+        values_types = self.common_type(values)
+        if issubclass(Object, keys_types):
+            raise InvalidTypeError("Dictionary keys are not of the same type", expression.start.line)
+        if issubclass(Object, values_types):
+            raise InvalidTypeError("Dictionary values are not of the same type", expression.start.line)
+        if not issubclass(keys_types, Float) and not issubclass(keys_types, String):
+            raise InvalidTypeError("Dictionary keys are not immutable", expression.start.line)
+        return TypeDict((keys_types, values_types))
 
     @visitor(Index)
     def check(self, expression: Index):
@@ -83,39 +101,43 @@ class TypeChecker(metaclass=Singleton):
         if expression.operator.type == TokenType.MINUS:
             return -right
         elif expression.operator.type == TokenType.EXCLAMATION:
-            if not issubclass(right, Bool):
-                raise TypeError()
-            return Bool
+            if not issubclass(right, Boolean):
+                raise InvalidOperation(f"Operator ! not supported for {right}", expression.operator)
+            return Boolean
         return None
 
     @visitor(Binary)
     def check(self, expression: Binary):
         left = expression.left.check(self)
         right = expression.right.check(self)
-        if expression.operator.type == TokenType.EQUAL_EQUAL:
-            return left == right
-        if expression.operator.type == TokenType.EQUAL_DIFFERENT:
-            return left != right
-        if expression.operator.type in [TokenType.AND, TokenType.OR]:
-            if not issubclass(left, Bool) or not issubclass(right, Bool):
-                raise TypeError()
-            return Bool
-        if expression.operator.type == TokenType.PLUS:
-            return left + right
-        if expression.operator.type == TokenType.MINUS:
-            return left - right
-        if expression.operator.type == TokenType.DIVIDE:
-            return left / right
-        if expression.operator.type == TokenType.MULTIPLY:
-            return left * right
-        if expression.operator.type == TokenType.LESS:
-            return left < right
-        if expression.operator.type == TokenType.LESS_EQUAL:
-            return left <= right
-        if expression.operator.type == TokenType.GREATER:
-            return left > right
-        if expression.operator.type == TokenType.GREATER_EQUAL:
-            return left >= right
+        try:
+            if expression.operator.type == TokenType.EQUAL_EQUAL:
+                return left == right
+            if expression.operator.type == TokenType.EQUAL_DIFFERENT:
+                return left != right
+            if expression.operator.type in [TokenType.AND, TokenType.OR]:
+                if not issubclass(left, Boolean) or not issubclass(right, Boolean):
+                    raise InvalidOperation(f"Operator not supported for types {left} and {right}")
+                return Boolean
+            if expression.operator.type == TokenType.PLUS:
+                return left + right
+            if expression.operator.type == TokenType.MINUS:
+                return left - right
+            if expression.operator.type == TokenType.DIVIDE:
+                return left / right
+            if expression.operator.type == TokenType.MULTIPLY:
+                return left * right
+            if expression.operator.type == TokenType.LESS:
+                return left < right
+            if expression.operator.type == TokenType.LESS_EQUAL:
+                return left <= right
+            if expression.operator.type == TokenType.GREATER:
+                return left > right
+            if expression.operator.type == TokenType.GREATER_EQUAL:
+                return left >= right
+        except InvalidOperation as e:
+            e.token = expression.operator
+            raise e
         return None
 
     @visitor(Variable)
@@ -132,6 +154,9 @@ class TypeChecker(metaclass=Singleton):
                     f"Variable {expression.name.text} of type {expression.type.type.text} can't be assigned {expression_type}")
             expression_type = variable_type
         else:
+            if isinstance(expression_type, Function):
+                raise TypeError(
+                    f"Variable {expression.name.text} can't be assigned {expression_type}")
             if issubclass(expression_type, Null):
                 raise TypeError("Can't infer type of null")
         self.scope.declare(expression.name.text, expression_type)
@@ -140,10 +165,12 @@ class TypeChecker(metaclass=Singleton):
     def check(self, expression: VarType):
         if expression.type.text == "list":
             return TypeList(expression.nested.check(self))
+        if expression.type.text == "dict":
+            return TypeDict((expression.nested.check(self), expression.s_nested.check(self)))
         for t in self.types:
             if expression.type.text == str(t):
                 return t
-        raise TypeError(f"{expression.type.text} is not defined in current scope")
+        raise TypeNotDefined(f"Type {expression.type.text} is not defined in current scope", expression.type)
 
     @visitor(Assignment)
     def check(self, expression: Assignment):
@@ -152,7 +179,6 @@ class TypeChecker(metaclass=Singleton):
         if not self.can_assign(expression_type, left_type):
             raise TypeError(
                 f"Can't assign {expression_type} to {left_type} object")
-        # self.scope.assign(expression.left.name.text, expression_type)
 
     @visitor(ExpressionStatement)
     def check(self, expression: ExpressionStatement):
@@ -167,6 +193,8 @@ class TypeChecker(metaclass=Singleton):
             raise Exception("Invalid number of arguments")
         for arg, param in zip(expression.arguments, called.param_types):
             arg_type = arg.check(self)
+            if param is Type and isinstance(arg_type, Function):
+                continue
             if not self.can_assign(arg_type, param):
                 raise TypeError(f"Function with argument type {param} can't receive {arg_type}")
         return called.return_type
@@ -206,14 +234,14 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(If)
     def check(self, expression: If):
-        if not issubclass(expression.condition.check(self), Bool):
+        if not issubclass(expression.condition.check(self), Boolean):
             raise TypeError(f"if condition is not a boolean value")
         self.check_block(expression.code, Scope(self.scope))
         self.check_block(expression.else_code, Scope(self.scope))
 
     @visitor(While)
     def check(self, expression: While):
-        if not issubclass(expression.condition.check(self), Bool):
+        if not issubclass(expression.condition.check(self), Boolean):
             raise TypeError(f"while condition is not a boolean value")
         self.check_block(expression.code, Scope(self.scope))
 
@@ -277,6 +305,23 @@ class TypeChecker(metaclass=Singleton):
                 raise TypeError("Can't infer type of null")
         self.current_class.scope.declare(expression.name.text, expression_type)
 
+    @visitor(SwitchNode)
+    def check(self, expression: SwitchNode):
+        var = expression.variable.text
+        var_type = self.scope.get(var)
+        for _case in expression.switch_cases:
+            c_type = self.get_class(_case.text)
+            if not self.can_assign(var_type, c_type) and not self.can_assign(c_type, var_type):
+                raise TypeError(f"Can't cast {var_type} to {c_type}")
+            scope = Scope(self.scope)
+            scope.declare(var, c_type)
+            self.check_block(expression.switch_cases[_case], scope)
+        self.check_block(expression.default, self.scope)
+        
+    @visitor(CommentNode)
+    def check(self, expression: CommentNode):
+        pass
+
     def check_block(self, statements, scope: Scope):
         previous = self.scope
         try:
@@ -299,7 +344,7 @@ class TypeChecker(metaclass=Singleton):
                     return_type = Null
                 else:
                     return_type = node.return_type.check(self)
-                scope.declare(node.name.text, Function(node.name.text, params, return_type))
+                scope.declare(node.name.text, Function(node.name.text, params, return_type, node.name.line))
 
     def get_class(self, name: str):
         for t in self.types:
@@ -330,7 +375,8 @@ class TypeChecker(metaclass=Singleton):
                     if not TypeChecker.can_assign(i, j):
                         raise TypeError(f"Parameter in {member} defined in parent class as {j} type, not {i}")
                 if not TypeChecker.can_assign(current.return_type, function.return_type):
-                    raise TypeError(f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
+                    raise TypeError(
+                        f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
             else:
                 try:
                     variable = cls.scope.father.get(member)
@@ -345,7 +391,8 @@ class TypeChecker(metaclass=Singleton):
             if isinstance(node.code, Return):
                 return True
             if isinstance(node.code, If):
-                if TypeChecker.check_return_paths(node.code.code) and TypeChecker.check_return_paths(node.code.else_code):
+                if TypeChecker.check_return_paths(node.code.code) and TypeChecker.check_return_paths(
+                        node.code.else_code):
                     return True
         return False
 
@@ -357,4 +404,27 @@ class TypeChecker(metaclass=Singleton):
             if type1.list_type is None:
                 return True
             return TypeChecker.can_assign(type1.list_type, type2.list_type)
+        if isinstance(type1, TypeDict) and isinstance(type2, TypeDict):
+            if type1.key_type is None:
+                return True
+            return TypeChecker.can_assign(type1.key_type, type2.key_type) and \
+                   TypeChecker.can_assign(type1.value_type, type2.value_type)
         return issubclass(type1, type2)
+
+    @staticmethod
+    def common_type(types):
+        if not types:
+            return None
+        _type = types[0]
+        for elem in types:
+            if TypeChecker.can_assign(elem, _type):
+                continue
+            elif TypeChecker.can_assign(_type, elem):
+                _type = elem
+            else:
+                while not issubclass(Object, elem):
+                    if TypeChecker.can_assign(_type, elem):
+                        break
+                    elem = elem.__base__
+                _type = elem
+        return _type

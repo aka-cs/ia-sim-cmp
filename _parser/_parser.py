@@ -14,27 +14,32 @@ class Parser(metaclass=Singleton):
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
-        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr \
-            = CreateTerminals("if else while fun var return class attr".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, for_s, attr, switch, case, default \
+            = CreateTerminals("if else while fun var return class for attr switch case default".split())
         specials = integer, _float, identifier, string, _self, _super \
             = CreateTerminals("int float identifier string self super".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
         punctuation = comma, dot, semicolon, colon = CreateTerminals(", . ; :".split())
         boolean = true_i, false_i, null_i = CreateTerminals("true false null".split())
-
-        terminals = [symbol, *operators, *comparison, *logic, *statements, *specials, *grouping, *punctuation, *boolean]
+        comment = Terminal("comment")
+        
+        terminals = [symbol, *operators, *comparison, *logic, *statements,
+                     *specials, *grouping, *punctuation, *boolean, comment]
 
         non_terminals \
             = p_program, p_functions, p_statements, p_statement, p_if, p_else, p_while, p_fun_declaration, p_return, p_return_arg, \
               p_params, p_more_params, p_var_declaration, p_var_type, p_assign, p_expression_s, p_expression, p_logic, p_logic_op, \
               p_equality, p_equality_op, p_comparison, p_comparison_op, p_term, p_term_op, \
               p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
-              p_array, p_array_elem, p_more_array_elem, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass \
+              p_array, p_array_elem, p_more_array_elem, p_dict, p_dict_elem, p_more_dict_elem, \
+              p_types, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass, \
+              p_switch, p_cases, p_default, p_comment, p_for \
             = CreateNonTerminals("Program Functions Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
-                                 "Array ArrayElem MoreArrayElem Type Class ClassMembers Get Set Attribute SuperClass".split())
+                                 "Array ArrayElem MoreArrayElem Dict DictElem MoreDictElem Types Type Class "
+                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default Comment For".split())
 
         e = Epsilon()
 
@@ -44,7 +49,10 @@ class Parser(metaclass=Singleton):
             p_functions > (p_fun_declaration + p_functions | e,
                            lambda x: [Statement(x[0]), *x[1]], lambda x: []),
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr,
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch | p_comment | p_for,
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
+                           lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -52,6 +60,17 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
+
+            p_for > (for_s + open_p + var_s + identifier + colon + p_expression + close_p + open_b + p_statements + close_b,
+                     lambda x: ForNode(x[3], x[5], x[8])),
+            
+            p_comment > (comment, lambda x: CommentNode(x[0].text)),
+
+            p_switch > (switch + identifier + colon + case + identifier + open_b + p_statements + close_b + p_cases + p_default,
+                        lambda x: SwitchNode(x[1], {x[4]: x[6], **x[8]}, x[9])),
+            p_cases > (case + identifier + open_b + p_statements + close_b + p_cases | e,
+                       lambda x: {x[1]: x[3], **x[5]}, lambda x: dict()),
+            p_default > (default + open_b + p_statements + close_b | e, lambda x: x[2], lambda x: []),
 
             p_class > (class_s + identifier + p_superclass + open_b + p_class_members + close_b |
                        identifier + colon + colon + identifier + open_b + p_class_members + close_b,
@@ -75,8 +94,9 @@ class Parser(metaclass=Singleton):
                       lambda x: AttrDeclaration(x[1], x[2], x[4])),
             p_var_type > (colon + p_type | e, lambda x: x[1], lambda x: None),
             p_type > (
-                identifier + less + p_type + greater | identifier, lambda x: VarType(x[0], x[2]),
+                identifier + less + p_types + greater | identifier, lambda x: VarType(x[0], *x[2]),
                 lambda x: VarType(x[0])),
+            p_types > (p_type | p_type + comma + p_type, lambda x: [x[0]], lambda x: [x[0], x[2]]),
             p_assign > (p_set + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
             p_fun_declaration > (
                 fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
@@ -102,29 +122,38 @@ class Parser(metaclass=Singleton):
             p_call > (p_primary | p_get,
                       lambda x: x[0],
                       lambda x: x[0]),
-            p_primary > (integer | _float | string | true_i | false_i | null_i | open_p + p_logic + close_p | p_array,
-                         lambda x: Literal(int(x[0].text)),
-                         lambda x: Literal(float(x[0].text)),
-                         lambda x: Literal(x[0].text),
-                         lambda x: Literal(True),
-                         lambda x: Literal(False),
-                         lambda x: Literal(None),
-                         lambda x: Grouping(x[1]),
-                         lambda x: x[0]),
+            p_primary > (
+                integer | _float | string | true_i | false_i | null_i | open_p + p_logic + close_p | p_array | p_dict,
+                lambda x: Literal(int(x[0].text)),
+                lambda x: Literal(float(x[0].text)),
+                lambda x: Literal(x[0].text),
+                lambda x: Literal(True),
+                lambda x: Literal(False),
+                lambda x: Literal(None),
+                lambda x: Grouping(x[1]),
+                lambda x: x[0],
+                lambda x: x[0]),
 
             p_set > (p_get + dot + identifier | identifier | p_index,
                      lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0]), lambda x: x[0]),
-            p_get > (p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super | p_index,
-                     lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
-                     lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode(), lambda x: x[0]),
+            p_get > (
+                p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super | p_index,
+                lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
+                lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode(), lambda x: x[0]),
             p_index > (p_call + open_br + p_expression + close_br, lambda x: Index(x[0], x[2])),
 
             p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
             p_more_arguments > (comma + p_expression + p_more_arguments | e, lambda x: [x[1], *x[2]], lambda x: []),
 
-            p_array > (open_br + p_array_elem + close_br, lambda x: ArrayNode(x[1])),
+            p_array > (open_br + p_array_elem + close_br, lambda x: ArrayNode(x[0], x[1])),
             p_array_elem > (p_expression + p_more_array_elem | e, lambda x: [x[0], *x[1]], lambda x: []),
             p_more_array_elem > (comma + p_expression + p_more_array_elem | e, lambda x: [x[1], *x[2]], lambda x: []),
+
+            p_dict > (open_b + p_dict_elem + close_b, lambda x: DictionaryNode(x[0], *x[1])),
+            p_dict_elem > (p_expression + colon + p_expression + p_more_dict_elem | e,
+                           lambda x: [[x[0], *x[3][0]], [x[2], *x[3][1]]], lambda x: [[], []]),
+            p_more_dict_elem > (comma + p_expression + colon + p_expression + p_more_dict_elem | e,
+                                lambda x: [[x[1], *x[4][0]], [x[3], *x[4][1]]], lambda x: [[], []]),
 
             p_logic_op > (and_operator | or_operator, lambda x: x[0], lambda x: x[0]),
             p_equality_op > (equals_equals | different, lambda x: x[0], lambda x: x[0]),
@@ -154,6 +183,7 @@ class Parser(metaclass=Singleton):
             TokenType.LESS_EQUAL: lessequal,
             TokenType.IF: if_s,
             TokenType.ELSE: else_s,
+            TokenType.FOR: for_s,
             TokenType.WHILE: while_s,
             TokenType.CLASS: class_s,
             TokenType.FUN: fun_s,
@@ -180,13 +210,18 @@ class Parser(metaclass=Singleton):
             TokenType.DOT: dot,
             TokenType.COLON: colon,
             TokenType.SEMICOLON: semicolon,
+            TokenType.SWITCH: switch,
+            TokenType.CASE: case,
+            TokenType.DEFAULT: default,
+            TokenType.COMMENT: comment,
             TokenType.EOF: self.parser.G.EOF
         }
 
     def _map_tokens_to_terminals(self, tokens: [Token]):
         mapped_tokens = []
         for token in tokens:
-            mapped_tokens.append(self.mapping.get(token.type, self.parser.G.Terminals[0]))
+            terminal = self.mapping.get(token.type, self.parser.G.Terminals[0])
+            mapped_tokens.append(terminal)
         return mapped_tokens
 
     def parse(self, tokens: [Token]):
