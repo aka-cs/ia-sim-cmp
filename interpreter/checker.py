@@ -411,6 +411,8 @@ class TypeChecker(metaclass=Singleton):
                 return True
             return TypeChecker.can_assign(type1.key_type, type2.key_type) and \
                    TypeChecker.can_assign(type1.value_type, type2.value_type)
+        if issubclass(type1, Null) and isinstance(type2, Class):
+            return True
         return issubclass(type1, type2)
 
     @staticmethod
