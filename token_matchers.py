@@ -23,6 +23,7 @@ matches = [
     TokenMatcher(r'fun', TokenType.FUN),
     TokenMatcher(r'if', TokenType.IF),
     TokenMatcher(r'else', TokenType.ELSE),
+    TokenMatcher(r'for', TokenType.FOR),
     TokenMatcher(r'while', TokenType.WHILE),
     TokenMatcher(r'null', TokenType.NULL),
     TokenMatcher(r'true', TokenType.TRUE),

@@ -14,8 +14,8 @@ class Parser(metaclass=Singleton):
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
-        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, attr, switch, case, default \
-            = CreateTerminals("if else while fun var return class attr switch case default".split())
+        statements = if_s, else_s, while_s, fun_s, var_s, return_s, class_s, for_s, attr, switch, case, default \
+            = CreateTerminals("if else while fun var return class for attr switch case default".split())
         specials = integer, _float, identifier, string, _self, _super \
             = CreateTerminals("int float identifier string self super".split())
         grouping = open_p, close_p, open_b, close_b, open_br, close_br = CreateTerminals("( ) { } [ ]".split())
@@ -33,13 +33,13 @@ class Parser(metaclass=Singleton):
               p_factor, p_factor_op, p_unary, p_unary_op, p_index, p_call, p_arguments, p_more_arguments, p_primary, \
               p_array, p_array_elem, p_more_array_elem, p_dict, p_dict_elem, p_more_dict_elem, \
               p_types, p_type, p_class, p_class_members, p_get, p_set, p_attr, p_superclass, \
-              p_switch, p_cases, p_default, p_comment \
+              p_switch, p_cases, p_default, p_comment, p_for \
             = CreateNonTerminals("Program Functions Statements Statement If Else While FunDeclaration Return ReturnArg "
                                  "Params MoreParams VarDeclaration VarType Assign ExpressionS Expression Logic Logic_op "
                                  "Equality Equality_op Comparison Comparison_op Term Term_op "
                                  "Factor Factor_op Unary Unary_op Index Call Arguments MoreArguments Primary "
                                  "Array ArrayElem MoreArrayElem Dict DictElem MoreDictElem Types Type Class "
-                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default Comment".split())
+                                 "ClassMembers Get Set Attribute SuperClass Switch Cases Default Comment For".split())
 
         e = Epsilon()
 
@@ -49,7 +49,8 @@ class Parser(metaclass=Singleton):
             p_functions > (p_fun_declaration + p_functions | e,
                            lambda x: [Statement(x[0]), *x[1]], lambda x: []),
             p_statements > (p_statements + p_statement | e, lambda x: [*x[0], x[1]], lambda x: []),
-            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch | p_comment,
+            p_statement > (p_if | p_while | p_var_declaration | p_assign | p_return | p_expression_s | p_attr | p_switch | p_comment | p_for,
+                           lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
@@ -59,6 +60,9 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
+
+            p_for > (for_s + open_p + var_s + identifier + colon + p_expression + close_p + open_b + p_statements + close_b,
+                     lambda x: ForNode(x[3], x[5], x[8])),
             
             p_comment > (comment, lambda x: CommentNode(x[0].text)),
 
@@ -179,6 +183,7 @@ class Parser(metaclass=Singleton):
             TokenType.LESS_EQUAL: lessequal,
             TokenType.IF: if_s,
             TokenType.ELSE: else_s,
+            TokenType.FOR: for_s,
             TokenType.WHILE: while_s,
             TokenType.CLASS: class_s,
             TokenType.FUN: fun_s,

@@ -51,6 +51,18 @@ class TypeChecker(metaclass=Singleton):
             return Null
         return None
 
+    @visitor(ForNode)
+    def check(self, expression: ForNode):
+        scope = Scope(self.scope)
+        iterable = expression.iterable.check(self)
+        if isinstance(iterable, TypeDict):
+            scope.declare(expression.variable.text, iterable.key_type)
+        elif isinstance(iterable, TypeList):
+            scope.declare(expression.variable.text, iterable.list_type)
+        else:
+            raise TypeError("For can only iterate over a list or a dictionary")
+        self.check_block(expression.statements, scope)
+
     @visitor(ArrayNode)
     def check(self, expression: ArrayNode):
         result = [elem.check(self) for elem in expression.expressions]

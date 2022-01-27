@@ -211,6 +211,14 @@ class Transpiler:
     def eval(self, expression: CommentNode, tabs: int = 0):
         return '#' + expression.text[2:]
 
+    @visitor(ForNode)
+    def eval(self, expression: ForNode, tabs: int = 0):
+        tabs_str = '\t' * tabs
+        self.lines.append(f'{tabs_str}for {expression.variable.text} in {expression.iterable.eval(self)}:')
+        if not expression.statements:
+            self.lines.append(f'{tabs_str}\tpass')
+        self.eval_block(expression.statements, tabs + 1)
+
     def eval_block(self, statements, tabs: int = 0):
         for statement in statements:
             self.eval(statement, tabs=tabs)

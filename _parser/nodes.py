@@ -163,3 +163,10 @@ class SwitchNode(Node):
 @dataclass
 class CommentNode(Node):
     text: str
+
+
+@dataclass
+class ForNode(Node):
+    variable: Token
+    iterable: Node
+    statements: [Node]
