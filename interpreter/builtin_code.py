@@ -71,37 +71,43 @@ class DownloadEvent(Event):
 
 @dataclass
 class Environment:
-    def get_state(self):
+    @abstractmethod
+    def places(self) -> [Place]:
         """
-        Devuelve el estado actual del entorno simulado.
+        Devuelve las localizaciones del entorno simulado.
         """
         pass
 
+    @abstractmethod
     def update_state(self, event: Event) -> [Event]:
         """
         Dado un evento, actualiza el entorno simulado.
         """
         pass
 
+    @abstractmethod
     def get_all_objects(self, position: Place) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
         pass
 
+    @abstractmethod
     def get_object(self, position: Place, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
         pass
 
-    def set_object(self, position: Place, element: MapObject):
+    @abstractmethod
+    def set_object(self, position: Place, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
         pass
 
-    def remove_object(self, position: Place, identifier: int):
+    @abstractmethod
+    def remove_object(self, position: Place, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
@@ -148,6 +154,7 @@ class Vehicle(MapObject):
                     if len(cargos) > 0:
                         events: [Event] = [LoadEvent(self.identifier, cargo.identifier, event.time + i + 1)
                                            for i, cargo in enumerate(cargos)]
+                        # noinspection PyTypeChecker
                         events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
                         return events
 
@@ -178,7 +185,7 @@ class Vehicle(MapObject):
         """
         pass
 
-    def load(self, cargo_id: int, env: Environment):
+    def load(self, cargo_id: int, env: Environment) -> None:
         """
         Carga el elemento en la posición actual con el identificador especificado.
         """
@@ -189,7 +196,7 @@ class Vehicle(MapObject):
             env.remove_object(self.position, cargo_id)
             self.cargos.append(element)
 
-    def download(self, cargo_id, env: Environment):
+    def download(self, cargo_id, env: Environment) -> None:
         """
         Descarga el elemento con el identificador especificado en la posición actual.
         """
@@ -205,26 +212,26 @@ class Vehicle(MapObject):
                 break
 
     @abstractmethod
-    def get_objectives(self, env: Environment):
+    def get_objectives(self, env: Environment) -> [Place]:
         """
         Localiza en el mapa los posibles recorridos del taxi.
         """
         pass
 
     @abstractmethod
-    def next_objective(self, places: str, env: Environment):
+    def next_objective(self, places: str, env: Environment) -> [Place]:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
         pass
 
-    def get_pos(self):
+    def get_pos(self) -> Place:
         """
         Devuelve la posición actual del vehiculo.
         """
         return self.position
 
-    def report_state(self):
+    def report_state(self) -> (Place, [Place], [Cargo]):
         """
         Devuelve la posición actual y recorrido del vehículo, y si lleva carga o no.
         """
@@ -233,23 +240,47 @@ class Vehicle(MapObject):
 
 @dataclass
 class GraphEnvironment(Environment):
-    edges: [[int]]
-    objects: dict[Place, object]
+    edges: dict[Place, [Place]]
+    objects: dict[Place, dict[int, MapObject]]
 
-    def __getitem__(self, place: Place):
-        return self.objects.get(place, None)
+    def places(self) -> [Place]:
+        """
+        Devuelve las localizaciones del entorno simulado.
+        """
+        return [place for place in self.objects.keys()]
 
-    @property
-    def places(self):
-        return self.objects.keys()
+    def update_state(self, event: Event) -> [Event]:
+        """
+        Dado un evento, actualiza el entorno simulado.
+        """
+        pass
 
-    def get_vehicles(self):
-        return {place: self.objects[place] for place in self.places
-                if isinstance(self.objects[place], Vehicle)}
+    def get_all_objects(self, position: Place) -> [MapObject]:
+        """
+        Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
+        """
+        return [element for element in self.objects.get(position, {}).values()]
 
-    def get_cargos(self):
-        return {place: self.objects[place] for place in self.places
-                if isinstance(self.objects[place], Cargo)}
+    def get_object(self, position: Place, identifier: int) -> MapObject:
+        """
+        Devuelve el elemento del entorno simulado con el id especificado.
+        """
+        if position in self.objects and identifier in self.objects[position]:
+            return self.objects[position][identifier]
+
+    def set_object(self, position: Place, element: MapObject) -> None:
+        """
+        Coloca al elemento dado en la posición especificada del entorno simulado.
+        """
+        if position in self.objects:
+            self.objects[position][element.identifier] = element
+
+    def remove_object(self, position: Place, identifier: int) -> None:
+        """
+        Remueve al elemento dado en la posición especificada del entorno simulado.
+        """
+        if position in self.objects and identifier in self.objects[position]:
+            del self.objects[position][identifier]
 
 
 class AStar:
