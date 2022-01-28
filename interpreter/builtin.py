@@ -81,6 +81,7 @@ builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("print", [Object], Null),
     BuiltinFunction("len", [List], Int),
     BuiltinFunction("isinstance", [Object, Type], Boolean),
+    BuiltinFunction("max", [Float, Float], Float),
     BuiltinFunction("min", [Float, Float], Float),
     BuiltinFunction("get_inf", [], Float),
     BuiltinFunction("pow", [Float], Float),
