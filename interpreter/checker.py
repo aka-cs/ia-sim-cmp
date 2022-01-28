@@ -159,6 +159,8 @@ class TypeChecker(metaclass=Singleton):
                     f"Variable {expression.name.text} can't be assigned {expression_type}")
             if issubclass(expression_type, Null):
                 raise TypeError("Can't infer type of null")
+        if self.scope.exists(expression.name.text):
+            raise Exception(f"Variable {expression.name.text} already exists")
         self.scope.declare(expression.name.text, expression_type)
 
     @visitor(VarType)
