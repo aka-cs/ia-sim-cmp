@@ -14,7 +14,7 @@ class TypeChecker(metaclass=Singleton):
     def __init__(self):
         self.globals = Scope()
         self.scope = self.globals
-        self.types = [Float, Int, String, Boolean, *builtin_classes]
+        self.types = [Object, Float, Int, String, Boolean, *builtin_classes]
         self.current_function: Function | None = None
         self.current_class: Class | None = None
         for fun in builtin_functions:
