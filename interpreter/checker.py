@@ -376,8 +376,8 @@ class TypeChecker(metaclass=Singleton):
                 if len(function.param_types) != len(current.param_types):
                     raise TypeError("Function must have same number of arguments as in parent class")
                 for i, j in zip(current.param_types, function.param_types):
-                    if not TypeChecker.can_assign(i, j):
-                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, not {i}")
+                    if not TypeChecker.can_assign(j, i):
+                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, can't be of type {i} in class {cls}")
                 if not TypeChecker.can_assign(current.return_type, function.return_type):
                     raise TypeError(
                         f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
