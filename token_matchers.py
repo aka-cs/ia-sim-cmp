@@ -29,6 +29,8 @@ matches = [
     TokenMatcher(r'true', TokenType.TRUE),
     TokenMatcher(r'false', TokenType.FALSE),
     TokenMatcher(r'return', TokenType.RETURN),
+    TokenMatcher(r'break', TokenType.BREAK),
+    TokenMatcher(r'continue', TokenType.CONTINUE),
     TokenMatcher(r'&&', TokenType.AND),
     TokenMatcher(r'\|\|', TokenType.OR),
     TokenMatcher(r'and', TokenType.AND),

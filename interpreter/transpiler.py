@@ -24,6 +24,14 @@ class Transpiler:
         self.lines.append("if __name__ == '__main__':\n\tmain()\n")
         return self.lines
 
+    @visitor(ContinueNode)
+    def check(self, expression: ContinueNode, tabs: int = 0):
+        return "continue"
+
+    @visitor(BreakNode)
+    def check(self, expression: BreakNode, tabs: int = 0):
+        return "break"
+
     @visitor(SwitchNode)
     def eval(self, statement: SwitchNode, tabs: int = 0):
         tabs_string = "\t"*tabs

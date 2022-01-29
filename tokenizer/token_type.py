@@ -60,6 +60,8 @@ class TokenType(Enum):
     SWITCH = auto()
     CASE = auto()
     DEFAULT = auto()
+    BREAK = auto()
+    CONTINUE = auto()
     
     # Comment
     COMMENT = auto()
