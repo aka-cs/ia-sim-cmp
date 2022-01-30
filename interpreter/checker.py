@@ -214,9 +214,13 @@ class TypeChecker(metaclass=Singleton):
     def check(self, expression: FunctionNode):
         if self.current_class and expression.name.text == "init":
             if not issubclass(Object, self.current_class.__bases__[0]):
-                if not expression.body or not isinstance(expression.body[0].code, Call):
+                line = None
+                for statement in expression.body:
+                    if not isinstance(statement.code, CommentNode):
+                        line = statement.code
+                        break
+                if not expression.body or not isinstance(line, Call):
                     raise Exception("init method must call super's init in first statement")
-                line = expression.body[0].code
                 if not isinstance(line.called, GetNode):
                     raise Exception("init method must call super's init in first statement")
                 if not isinstance(line.called.left, SuperNode) or line.called.right.text != "init":
@@ -383,6 +387,8 @@ class TypeChecker(metaclass=Singleton):
                 try:
                     function = cls.scope.father.get(member)
                 except:
+                    continue
+                if function.name == "init":
                     continue
                 if len(function.param_types) != len(current.param_types):
                     raise TypeError("Function must have same number of arguments as in parent class")

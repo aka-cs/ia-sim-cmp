@@ -2,7 +2,7 @@ import inspect
 
 from . import builtin_code
 from .builtin_code import *
-from .functions import BuiltinFunction
+from .functions import Function
 from ._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
 from .classes import Class
 from .scope import Scope
@@ -52,13 +52,13 @@ def get_classes(module=builtin_code) -> [Class]:
     return result
 
 
-def get_builtin_function(function) -> BuiltinFunction:
+def get_builtin_function(function) -> Function:
     _annotations = inspect.get_annotations(function[1])
     params = [get_type(_annotations[var]) for var in _annotations if var != 'return']
-    return BuiltinFunction(function[0], params, get_type(_annotations.get('return', None)))
+    return Function(function[0], params, get_type(_annotations.get('return', None)))
 
 
-def get_functions(module=builtin_code) -> [BuiltinFunction]:
+def get_functions(module=builtin_code) -> [Function]:
     functions = inspect.getmembers(module, inspect.isfunction)
     result = []
     for function in functions:
@@ -77,9 +77,9 @@ def get_code(file: str) -> [str]:
 
 builtin_classes: [Class] = [*get_classes()]
 
-builtin_functions: [BuiltinFunction] = [
-    BuiltinFunction("print", [Object], Null),
-    BuiltinFunction("len", [List], Int),
-    BuiltinFunction("isinstance", [Object, Type], Boolean),
+builtin_functions: [Function] = [
+    Function("print", [Object], Null),
+    Function("len", [List], Int),
+    Function("isinstance", [Object, Type], Boolean),
     *get_functions()
 ]
