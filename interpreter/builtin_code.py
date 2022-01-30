@@ -46,6 +46,16 @@ class Event:
 
 
 @dataclass
+class DeleteEvent(Event):
+    """
+    Evento de eliminacion. Indica al entorno simulado que debe eliminar el objeto del id correspondiente,
+    en la posicion dada.
+    """
+    object_id: str
+    position: Place
+
+
+@dataclass
 class MovementEvent(Event):
     """
     Evento de movimiento. Indica al vehículo correspondiente que debe moverse.
