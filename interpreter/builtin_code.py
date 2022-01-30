@@ -6,15 +6,6 @@ import heapq
 
 
 @dataclass
-class MapObject:
-    """
-    Clase objeto de entorno. Engloba a los elementos posibles de un entorno simulado.
-    """
-    # Identificador para distinguir los elementos.
-    identifier: int
-
-
-@dataclass
 class Place:
     """
     Clase lugar. Define las diferentes localizaciones del entorno simulado.
@@ -24,14 +15,29 @@ class Place:
 
 
 @dataclass
+class MapObject:
+    """
+    Clase objeto de entorno. Engloba a los elementos posibles de un entorno simulado.
+    """
+    # Identificador para distinguir los elementos.
+    identifier: int
+    # Lugar del entorno simulado en el que se encuentra la carga.
+    position: Place
+
+    @abstractmethod
+    def update_state(self, env: Environment, event: Event) -> [Event]:
+        """
+        Actualiza el estado del objeto según las caracteristicas de este.
+        """
+        pass
+
+
+@dataclass
 class Cargo:
     """
     Clase carga. Engloba los objeto cargables/transportables por un vehículo.
     """
-    # Identificador para distinguir las cargas.
-    identifier: int
-    # Lugar del entorno simulado en el que se encuentra la carga.
-    position: Place
+    pass
 
 
 @dataclass
@@ -52,7 +58,6 @@ class SetEvent(Event):
     en la posicion dada.
     """
     object: MapObject
-    position: Place
 
 
 @dataclass
@@ -139,8 +144,6 @@ class Vehicle(MapObject):
     """
     Clase vehículo. Define los diferentes transportes del entorno simulado.
     """
-    # Lugar del entorno simulado en el que se encuentra el vehículo.
-    position: Place
     # Carga que actualmente desplaza el vehículo.
     cargos: [Cargo] = field(default_factory=list)
     # Recorrido del vehículo.
@@ -191,7 +194,7 @@ class Vehicle(MapObject):
             # Revisa los objetivos en el mapa.
             places = self.get_objectives(env)
             # Calcula el nuevo recorrido.
-            self.tour = self.next_objective(places, env).reverse()
+            self.tour = self.next_objective(places, env)
 
         # Mientras haya camino que recorrer, lanzamos un evento de movimiento, en caso contrario
         # no lanzamos nada.
@@ -260,8 +263,8 @@ class Vehicle(MapObject):
 
 @dataclass
 class GraphEnvironment(Environment):
-    edges: dict[Place, [Place]]
-    objects: dict[Place, dict[int, MapObject]]
+    edges: dict[Place, [(Place, float)]] = field(default_factory=dict)
+    objects: dict[Place, dict[int, MapObject]] = field(default_factory=dict)
 
     def places(self) -> [Place]:
         """
@@ -273,10 +276,14 @@ class GraphEnvironment(Environment):
         """
         Dado un evento, actualiza el entorno simulado.
         """
+
+        # Si es un evento de borrado, borramos el elemento correspondiente en la posición dada.
         if isinstance(event, DeleteEvent):
             self.remove_object(event.position, event.object_id)
+
+        # Si es un evento de adición, añadimos el elemento correspondiente en la posición dada.
         elif isinstance(event, SetEvent):
-            self.set_object(event.position, event.object)
+            self.set_object(event.object.position, event.object)
 
     def get_all_objects(self, position: Place) -> [MapObject]:
         """
@@ -309,62 +316,110 @@ class GraphEnvironment(Environment):
 class AStar:
     @staticmethod
     @abstractmethod
-    def h(current: str, destinations: [Place], actor: MapObject, graph: GraphEnvironment) -> float:
+    def h(current: Place, destinations: [Place], principal_actor: MapObject, actors: [MapObject],
+          graph: GraphEnvironment) -> float:
+        """
+        Heuristica de AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
+        para la heuristica, dígase, la posición actual, las posiciones destino, un agente distinguido
+        (potencialmente el actor al que pertenece la IA), una lista de actores tener en cuenta y el
+        entorno simulado.
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def actualize(place: str, actor: MapObject, graph: GraphEnvironment):
+    def actualize_objective(objective: Place, principal_actor: MapObject, actors: [MapObject],
+                            graph: GraphEnvironment) -> None:
+        """
+        Método de actualizacion adyacente, recibe todos los objetos de los cuales pudiera ser necesaria
+        información para actualizar el objetivo devuelto por AStar, dígase, la posición objetivo,
+        un actor distinguido (potencialmente el actor al que pertenece la IA), una lista de actores
+        tener en cuenta y el entorno simulado.
+        """
         pass
 
-    def algorithm(self, origin: str, stop: [str], actor: MapObject, graph: GraphEnvironment) -> [str]:
+    def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
+                  graph: GraphEnvironment) -> [str]:
+        """
+        Algoritmo AStar.
+        """
+
+        # Conjunto salida.
         open_lst = {origin}
+
+        # Conjunto llegada.
         closed_lst = set()
 
+        # Lista de distancias.
         distances = dict()
+        # La distancia del origen al origen es 0.
         distances[origin] = 0
 
-        par = dict()
-        par[origin] = origin
+        # Lista de padres (es una forma de representar el ast asociado al recorrido que
+        # realiza AStar sobre el grafo).
+        parents = dict()
+        # El origen es su propio padre (es el inicio del camino).
+        parents[origin] = origin
 
+        # Mientras en el conjunto de salida queden elementos.
         while len(open_lst) > 0:
-            n = None
+            # Instanciamos el vertice actual con el valor por defecto None.
+            v = None
 
-            for v in open_lst:
-                if n is None or distances[v] + self.h(v, stop, actor, graph) \
-                        < distances[n] + self.h(n, stop, actor, graph):
-                    n = v
+            # Por cada vértice w del conjunto salida.
+            for w in open_lst:
+                # Si aun no hemos instanciado v o bien el vértice w está más cerca
+                # del conjunto llegada (según la heurística) que v, actualizamos v con w.
+                if v is None or distances[w] + self.h(w, objectives, principal_actor, actors, graph) \
+                        < distances[v] + self.h(v, objectives, principal_actor, actors, graph):
+                    v = w
 
-            if n is None:
-                return []
+            # Si v esta directamente en el conjunto objetivo.
+            if v in objectives:
+                # Actualizamos la posición destino como objetivo del actor principal.
+                self.actualize_objective(v, principal_actor, actors, graph)
 
-            if n in stop:
+                # Variable para guardar el camino.
                 path = []
 
-                while par[n] != n:
-                    path.append(n)
-                    self.actualize(n, actor, graph)
-                    n = par[n]
+                # Mientras quede camino (mientras no encontremos un nodo que sea su propio padre, o sea,
+                # no encontremos el origen).
+                while parents[v] != v:
+                    # Añadimos el vertice al camino.
+                    path.append(v)
+                    # Nos movemos al vertice padre.
+                    v = parents[v]
 
-                path.reverse()
+                # Devolvemos el camino.
                 return path
 
-            for (m, weight) in graph.edges[n]:
-                if m not in open_lst and m not in closed_lst:
-                    open_lst.add(m)
-                    par[m] = n
-                    distances[m] = distances[n] + weight
+            # En caso de que v no sea del conjunto objetivo, visitamos cada adyacente w de v.
+            for (w, weight) in graph.edges[v]:
+                # Si w no pertenece al conjunto origen ni al conjunto objetivo.
+                if w not in open_lst and w not in closed_lst:
+                    # Lo añadimos al conjunto origen ahora que fue visitado.
+                    open_lst.add(w)
+                    # Asignamos a v como su padre.
+                    parents[w] = v
+                    # Actualizamos el array de distancias consecuentemente.
+                    distances[w] = distances[w] + weight
+                # Si está en alguno de los dos conjuntos.
                 else:
-                    if distances[m] > distances[n] + weight:
-                        distances[m] = distances[n] + weight
-                        par[m] = n
+                    # Si pasar por v mejora el camino de costo minimo del origen a w,
+                    # entonces pasamos por v.
+                    if distances[w] > distances[v] + weight:
+                        # Actualizamos la distancia.
+                        distances[w] = distances[v] + weight
+                        # Colocamos a v como padre de w.
+                        parents[w] = v
 
-                        if m in closed_lst:
-                            closed_lst.remove(m)
-                            open_lst.add(m)
+                        # Si el vértice está en el conjunto de llegada.
+                        if w in closed_lst:
+                            closed_lst.remove(w)
+                            open_lst.add(w)
 
-            open_lst.remove(n)
-            closed_lst.add(n)
+            open_lst.remove(v)
+            closed_lst.add(v)
 
         return []
 
@@ -373,12 +428,18 @@ def infinity():
     return inf
 
 
-def start(vehicle: Vehicle, env: Environment, total_time: int):
-    time = 0
-    events = [Event(0, 0)]
-    while events and (time := heapq.heappop(events).time) and time <= total_time:
-        for event in env.update_state(time):
+def simulate_environment(env: Environment, initial_events: [Event], total_time: int):
+    """
+    Simula el entorno, evento a evento.
+    """
+    actual_event = None
+    events = [event for event in initial_events]
+    while len(events) > 0 and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
+        for event in env.update_state(actual_event):
             heapq.heappush(events, event)
-        for event in vehicle.update_state(env, time):
-            heapq.heappush(events, event)
-        vehicle.report_state()
+        # Actualizamos cada objeto del entorno.
+        for place in env.places():
+            for map_object in env.get_all_objects(place):
+                for event in env.get_object(place, map_object.identifier).update_state(env, actual_event):
+                    heapq.heappush(events, event)
+        # vehicle.report_state()

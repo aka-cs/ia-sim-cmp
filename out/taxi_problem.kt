@@ -13,8 +13,7 @@ Position::Place{
 
 
 Person::Cargo{
-    fun init(identifier: Int, position: Position, destiny: Position, payment: Int, actual_time: Int,
-    waiting_time: Int){
+    fun init(identifier: Int, position: Position, destiny: Position, payment: Int, final_time: Int){
         // Clase persona.
 
         // Instanciamos la clase carga (de la que hereda persona) con el identificador y la posición.
@@ -26,7 +25,7 @@ Person::Cargo{
         // Identificador del vehiculo que reservó la persona.
         attr reserved_id: Int = 0
         // Tiempo final hasta el que esperará la persona.
-        attr final_time: Int = actual_time + waiting_time
+        attr final_time: Int = final_time
     }
 
     fun update_state(env: Environment, event: Event): List<Event>{
@@ -47,7 +46,7 @@ Person::Cargo{
 
 Taxi::Vehicle
 {
-    fun init(identifier: Int, position: String){
+    fun init(identifier: Int, position: Place){
         // Clase vehiculo.
 
         // Instanciamos la clase vehículo (de la que hereda taxi) con el identificador y la posición.
@@ -56,7 +55,7 @@ Taxi::Vehicle
         self.IA = AStarT()
     }
 
-    fun something_to_charge(env: GraphEnvironment): List<Person>{
+    fun something_to_charge(env: Environment): List<Person>{
         // Verifica si en la posicion actual hay objetos que cargar, y en caso positivo, devuelve una
         // lista de ellos.
         // En el caso del taxi, dado que carga una sola persona a la vez, la lista siempre será unaria.
@@ -80,11 +79,11 @@ Taxi::Vehicle
         return []
     }
 
-    fun next_objective(positions: [Position], env: GraphEnvironment): List<Position>{
+    fun next_objective(positions: List<Place>, env: Environment): List<Position>{
         // Encuentra el proximo objetivo del taxi en base a un comportamiento definido.
 
         // El proximo objetivo esta determinado por la IA del taxi.
-        return self.IA.algorithm(position, env)
+        return self.IA.algorithm(positions, env)
     }
 }
 
@@ -102,49 +101,64 @@ AStar::AStarT{
         return distance + destiny_distance - person.payment
     }
 
-    fun h(current: Position, destinations: [Position], taxi: Taxi, graph: GraphEnvironment): Float{
+    fun h(current: Place, destinations: List<Place>, taxi: MapObject, taxis: List<MapObject>,
+        graph: Environment): Float{
         // Heuristica de AStarT.
 
-        // Por cada posicion destino posible.
-        for(var destiny : destinations){
-            // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
-            // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
-            map_object: List<MapObject> = graph.get_objects(self.position)[0]
+        // Comrpobamos que cada parametro recibido sea del tipo deseado.
+        switch current:
+            case Position{
+                // Por cada posicion destino posible.
+                for(var destiny : destinations){
+                    // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
+                    // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
+                    map_object: List<MapObject> = graph.get_objects(self.position)[0]
 
-            // Comprobamos el objeto en la posicion actual.
-            switch map_object:
-                // Solo nos interesa si es una persona (el taxi solo carga personas).
-                case Person{
-                    // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica para esta
-                    // persona, y retornamos este valor, dado que es la unica persona en esta posicion.
-                    if(map_object.reserved_id == 0){
-                        return measure(current, person)
-                    }
+                    // Comprobamos si el destino es una posición.
+                    switch destiny:
+                        case Position{
+                            // Comprobamos el objeto en la posicion actual.
+                            switch map_object:
+                                // Solo nos interesa si es una persona (el taxi solo carga personas).
+                                case Person{
+                                    // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica
+                                    // para esta persona, y retornamos este valor, dado que es la unica persona en
+                                    // esta posición.
+                                    if(map_object.reserved_id == 0){
+                                        return measure(current, person)
+                                    }
+                                }
+                        }
+
                 }
-        }
+            }
 
         // En cualquier otro caso devolvemos un valor absurdo (infinito).
         return infinity()
     }
 
-    fun actualize(current: Position, taxi: Taxi, graph: GraphEnvironment): Float{
+    fun actualize(current: Place, taxi: MapObject, taxis: List<MapObject>, graph: Environment): void{
         // Metodo para actualizar la posicion objetivo del taxi en el entorno,
         // dado el taxi y la posicion afectada.
 
         // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
         // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
-        map_object: List<MapObject> = graph.get_objects(self.position)[0]
+        map_object: List<MapObject> = graph.get_objects(current)[0]
 
-        // Comprobamos el objeto en la posicion actual.
-        switch map_object:
-            // Solo nos interesa si es una persona (el taxi solo carga personas).
-            case Person{
-                // Si esta persona no ha reservado taxi la marcamos como reservada para este,
-                // puesto que es la unica en esta posicion, y esta es la posicion objetivo
-                // del taxi.
-                if(map_object.reserved_id == 0){
-                    map_object.reserved_id = self.identifier
-                }
+        // Comprobamos que el actor principal sea un taxi.
+        switch taxi:
+            case Taxi{
+                // Comprobamos el objeto en la posicion actual.
+                switch map_object:
+                    // Solo nos interesa si es una persona (el taxi solo carga personas).
+                    case Person{
+                        // Si esta persona no ha reservado taxi la marcamos como reservada para este,
+                        // puesto que es la unica en esta posicion, y esta es la posicion objetivo
+                        // del taxi.
+                        if(map_object.reserved_id == 0){
+                            map_object.reserved_id = taxis[0].identifier
+                        }
+                    }
             }
 
         // Retornamos.
@@ -153,6 +167,21 @@ AStar::AStarT{
 }
 
 
+fun main(): void{
+    var places: List<Position> = [Position("Alamar", 10, 20), Position("Vedado", 20, 25),
+                                Position("10 de Octubre", 30, 35)]
+    var graph: dict<Place, List<tuple<Place, Float>>> = {places[0] : [(places[1], 25), (places[2], 30)],
+                                                         places[1] : (places[2], 10),
+                                                         places[2] : (places[1], 10)}
+    var objects: dict<Place, dict<Int, MapObject>> = {places[0] : {1 : Person(1, places[0], places[1], 1000, 100)},
+                                                      places[1] : {2 : Person(2, places[1], places[2], 1000, 100)}}
+    var env: GraphEnvironment = GraphEnvironment(graph, objects)
+    var total_time: Int = 1000
+    var taxi_A = Taxi(3, places[0])
+    var taxi_B = Taxi(4, places[2])
+    var initial_events = [SetEvent(0, 0, taxi_A), SetEvent(0, 1, taxi_B)]
+    simulate_environment(env, initial_events, total_time):
+}
 
 
 

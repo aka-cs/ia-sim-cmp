@@ -78,6 +78,7 @@ def get_code(file: str) -> [str]:
 builtin_classes: [Class] = [*get_classes()]
 
 builtin_functions: [BuiltinFunction] = [
+    BuiltinFunction("simulate_environment", [Environment, [Event], Int], Null),
     BuiltinFunction("print", [Object], Null),
     BuiltinFunction("len", [List], Int),
     BuiltinFunction("isinstance", [Object, Type], Boolean),
