@@ -125,7 +125,7 @@ class Environment:
         pass
 
     @abstractmethod
-    def set_object(self, position: Place, element: MapObject) -> None:
+    def set_object(self, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
@@ -229,7 +229,7 @@ class Vehicle(MapObject):
             cargo = self.cargos[i]
             # Si el id de la carga es el especificado, encontramos la carga deseada.
             if cargo.identifier == cargo_id:
-                env.set_object(self.position, cargo)
+                env.set_object(cargo)
                 self.cargos[i], self.cargos[-1] = self.cargos[-1], self.cargos[i]
                 self.cargos.pop()
                 break
@@ -263,14 +263,15 @@ class Vehicle(MapObject):
 
 @dataclass
 class GraphEnvironment(Environment):
-    edges: dict[Place, [(Place, float)]] = field(default_factory=dict)
-    objects: dict[Place, dict[int, MapObject]] = field(default_factory=dict)
+    edges: {str: {str: float}}
+    places: {str: Place}
+    objects: {str: {int: MapObject}}
 
     def places(self) -> [Place]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
-        return [place for place in self.objects.keys()]
+        return [place for place in self.places.value()]
 
     def update_state(self, event: Event) -> [Event]:
         """
@@ -281,36 +282,36 @@ class GraphEnvironment(Environment):
         if isinstance(event, DeleteEvent):
             self.remove_object(event.position, event.object_id)
 
-        # Si es un evento de adición, añadimos el elemento correspondiente en la posición dada.
+        # Si es un evento de adición, añadimos el elemento correspondiente.
         elif isinstance(event, SetEvent):
-            self.set_object(event.object.position, event.object)
+            self.set_object(event.object)
 
     def get_all_objects(self, position: Place) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
-        return [element for element in self.objects.get(position, {}).values()]
+        return [element for element in self.objects.get(position.name, {}).values()]
 
     def get_object(self, position: Place, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
         if position in self.objects and identifier in self.objects[position]:
-            return self.objects[position][identifier]
+            return self.objects[position.name][identifier]
 
-    def set_object(self, position: Place, element: MapObject) -> None:
+    def set_object(self, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if position in self.objects:
-            self.objects[position][element.identifier] = element
+        if element.position.name in self.objects:
+            self.objects[element.position.name][element.identifier] = element
 
     def remove_object(self, position: Place, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
-        if position in self.objects and identifier in self.objects[position]:
-            del self.objects[position][identifier]
+        if position.name in self.objects and identifier in self.objects[position.name]:
+            del self.objects[position.name][identifier]
 
 
 class AStar:
@@ -394,7 +395,9 @@ class AStar:
                 return path
 
             # En caso de que v no sea del conjunto objetivo, visitamos cada adyacente w de v.
-            for (w, weight) in graph.edges[v]:
+            for w in graph.edges[v]:
+                # Obtenemos el peso del arco que los une.
+                weight = graph.edges[v][w]
                 # Si w no pertenece al conjunto origen ni al conjunto objetivo.
                 if w not in open_lst and w not in closed_lst:
                     # Lo añadimos al conjunto origen ahora que fue visitado.

@@ -14,11 +14,11 @@ type_map = {type: Type, int: Int, float: Float, object: Object, bool: Boolean, s
 def get_type(_type: str | type):
     if isinstance(_type, str):
         if _type[0] == "[" and _type[-1] == "]":
-            return TypeList(get_type(_type[1:-1]))
-        if _type.startswith("dict"):
-            _type = _type[5:-1]
-            types = _type.split(", ")
-            return TypeDict((get_type(types[0]), get_type(types[1])))
+            return TypeList(get_type(_type[1:-1].strip()))
+        if _type[0] == "{" and _type[-1] == "}":
+            _type = _type[1:-1]
+            types = _type.split(":")
+            return TypeDict((get_type(types[0].strip()), get_type(types[1].strip())))
         _type = eval(_type)
     return type_map.get(_type, _type)
 

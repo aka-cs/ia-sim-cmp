@@ -62,7 +62,7 @@ Taxi::Vehicle
 
         // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
         // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
-        map_object: List<MapObject> = graph.get_objects(self.position)[0]
+        var map_object: List<MapObject> = graph.get_objects(self.position)[0]
 
         // Comprobamos el objeto en la posicion actual.
         switch map_object:
@@ -93,9 +93,9 @@ AStar::AStarT{
         // Calcula la medida que emplea la heuristica de AStarT.
 
         // Calculamos la distancia euclidiana entre la posicion actual y la posicion de la persona.
-        distance: Float = pow(current.x - person.position.x, 2) + pow(current.y - person.position.y, 2)
+        var distance: Float = pow(current.x - person.position.x, 2) + pow(current.y - person.position.y, 2)
         // Calculamos la distancia euclidiana entre la posicion de la persona y su destino.
-        destiny_distance: Float = pow(pow(person.position.x - person.destiny.x, 2) +
+        var destiny_distance: Float = pow(pow(person.position.x - person.destiny.x, 2) +
                                       pow(person.position.y - person.destiny.y, 2), 1/2)
         // Devolvemos la suma de las distancias menos el precio a pagar.
         return distance + destiny_distance - person.payment
@@ -112,7 +112,7 @@ AStar::AStarT{
                 for(var destiny : destinations){
                     // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
                     // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
-                    map_object: List<MapObject> = graph.get_objects(self.position)[0]
+                    var map_object: List<MapObject> = graph.get_objects(self.position)[0]
 
                     // Comprobamos si el destino es una posición.
                     switch destiny:
@@ -143,7 +143,7 @@ AStar::AStarT{
 
         // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
         // posicion del entorno habrá solo un objeto, por lo que la lista será unaria.
-        map_object: List<MapObject> = graph.get_objects(current)[0]
+        var map_object: List<MapObject> = graph.get_objects(current)[0]
 
         // Comprobamos que el actor principal sea un taxi.
         switch taxi:
@@ -170,12 +170,15 @@ AStar::AStarT{
 fun main(): void{
     var places: List<Position> = [Position("Alamar", 10, 20), Position("Vedado", 20, 25),
                                 Position("10 de Octubre", 30, 35)]
-    var graph: dict<Place, List<tuple<Place, Float>>> = {places[0] : [(places[1], 25), (places[2], 30)],
-                                                         places[1] : (places[2], 10),
-                                                         places[2] : (places[1], 10)}
-    var objects: dict<Place, dict<Int, MapObject>> = {places[0] : {1 : Person(1, places[0], places[1], 1000, 100)},
-                                                      places[1] : {2 : Person(2, places[1], places[2], 1000, 100)}}
-    var env: GraphEnvironment = GraphEnvironment(graph, objects)
+
+    var graph_places: dict<String, Place> = {places[0].name : places[0], places[1].name : places[1],
+                                                places[2].name : places[2]}
+    var graph_edges: dict<String, dict<String, Float>> = {"Alamar": {"Vedado" : 25, "10 de Octubre": 30},
+                                                          "Vedado": {"10 de Octubre": 10},
+                                                          "10 de Octubre": {"Vedado": 10}}
+    var get_objects: dict<String, dict<Int, Float>> = {"Alamar": {1 : Person(1, places[0], places[1], 1000, 100)},
+                                                       "Vedado": {2 : Person(2, places[1], places[2], 1000, 100)}}
+    var env: GraphEnvironment = GraphEnvironment(graph_edges, graph_places, get_objects)
     var total_time: Int = 1000
     var taxi_A = Taxi(3, places[0])
     var taxi_B = Taxi(4, places[2])
