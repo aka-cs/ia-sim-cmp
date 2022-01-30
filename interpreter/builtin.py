@@ -83,7 +83,7 @@ builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("isinstance", [Object, Type], Boolean),
     BuiltinFunction("max", [Float, Float], Float),
     BuiltinFunction("min", [Float, Float], Float),
-    BuiltinFunction("get_inf", [], Float),
+    BuiltinFunction("infinity", [], Float),
     BuiltinFunction("pow", [Float], Float),
     *get_functions()
 ]

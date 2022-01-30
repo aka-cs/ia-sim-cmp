@@ -46,12 +46,22 @@ class Event:
 
 
 @dataclass
+class SetEvent(Event):
+    """
+    Evento de eliminacion. Indica al entorno simulado que debe eliminar el objeto del id correspondiente,
+    en la posicion dada.
+    """
+    object: MapObject
+    position: Place
+
+
+@dataclass
 class DeleteEvent(Event):
     """
     Evento de eliminacion. Indica al entorno simulado que debe eliminar el objeto del id correspondiente,
     en la posicion dada.
     """
-    object_id: str
+    object_id: int
     position: Place
 
 
@@ -263,7 +273,10 @@ class GraphEnvironment(Environment):
         """
         Dado un evento, actualiza el entorno simulado.
         """
-        pass
+        if isinstance(event, DeleteEvent):
+            self.remove_object(event.position, event.object_id)
+        elif isinstance(event, SetEvent):
+            self.set_object(event.position, event.object)
 
     def get_all_objects(self, position: Place) -> [MapObject]:
         """
@@ -356,7 +369,7 @@ class AStar:
         return []
 
 
-def get_inf():
+def infinity():
     return inf
 
 
