@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from math import inf
+from math import inf, pow
 from abc import abstractmethod
 import heapq
 
