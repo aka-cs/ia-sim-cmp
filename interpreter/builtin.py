@@ -17,7 +17,7 @@ def get_type(_type: str | type):
             return TypeList(get_type(_type[1:-1].strip()))
         if _type[0] == "{" and _type[-1] == "}":
             _type = _type[1:-1]
-            types = _type.split(":")
+            types = _type.split(":", maxsplit=1)
             return TypeDict((get_type(types[0].strip()), get_type(types[1].strip())))
         _type = eval(_type)
     return type_map.get(_type, _type)
@@ -78,13 +78,11 @@ def get_code(file: str) -> [str]:
 builtin_classes: [Class] = [*get_classes()]
 
 builtin_functions: [BuiltinFunction] = [
-    BuiltinFunction("simulate_environment", [Environment, [Event], Int], Null),
     BuiltinFunction("print", [Object], Null),
     BuiltinFunction("len", [List], Int),
     BuiltinFunction("isinstance", [Object, Type], Boolean),
     BuiltinFunction("max", [Float, Float], Float),
     BuiltinFunction("min", [Float, Float], Float),
-    BuiltinFunction("infinity", [], Float),
     BuiltinFunction("pow", [Float], Float),
     *get_functions()
 ]

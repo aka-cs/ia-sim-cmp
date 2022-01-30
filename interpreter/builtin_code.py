@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from math import inf, pow
+from math import inf
 from abc import abstractmethod
 import heapq
 
@@ -97,7 +97,7 @@ class DownloadEvent(Event):
 @dataclass
 class Environment:
     @abstractmethod
-    def places(self) -> [Place]:
+    def get_places(self) -> [Place]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
@@ -254,12 +254,6 @@ class Vehicle(MapObject):
         """
         return self.position
 
-    def report_state(self) -> (Place, [Place], [Cargo]):
-        """
-        Devuelve la posición actual y recorrido del vehículo, y si lleva carga o no.
-        """
-        return self.position, self.tour, self.cargos
-
 
 @dataclass
 class GraphEnvironment(Environment):
@@ -267,7 +261,7 @@ class GraphEnvironment(Environment):
     places: {str: Place}
     objects: {str: {int: MapObject}}
 
-    def places(self) -> [Place]:
+    def get_places(self) -> [Place]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
@@ -441,7 +435,7 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
         # Actualizamos cada objeto del entorno.
-        for place in env.places():
+        for place in env.get_places():
             for map_object in env.get_all_objects(place):
                 for event in env.get_object(place, map_object.identifier).update_state(env, actual_event):
                     heapq.heappush(events, event)
