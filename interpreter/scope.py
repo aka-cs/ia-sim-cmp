@@ -26,3 +26,10 @@ class Scope:
             self.father.assign(name, value)
         else:
             raise Exception(f"Variable {name} not defined")
+
+    def exists(self, name: str):
+        if name in self.variables:
+            return True
+        if self.father:
+            return self.father.exists(name)
+        return False

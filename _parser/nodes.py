@@ -147,6 +147,16 @@ class SuperNode(Node):
 
 
 @dataclass
+class BreakNode(Node):
+    pass
+
+
+@dataclass
+class ContinueNode(Node):
+    pass
+
+
+@dataclass
 class AttrDeclaration(Node):
     name: Token
     type: VarType

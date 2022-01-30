@@ -14,9 +14,10 @@ class TypeChecker(metaclass=Singleton):
     def __init__(self):
         self.globals = Scope()
         self.scope = self.globals
-        self.types = [Float, Int, String, Boolean, *builtin_classes]
+        self.types = [Object, Float, Int, String, Boolean, *builtin_classes]
         self.current_function: Function | None = None
         self.current_class: Class | None = None
+        self.current_loops = 0
         for fun in builtin_functions:
             self.scope.declare(fun.name, Function(fun.name, fun.param_types, fun.return_type))
         for cls in builtin_classes:
@@ -36,6 +37,16 @@ class TypeChecker(metaclass=Singleton):
     @visitor(Statement)
     def check(self, expression: Statement):
         return expression.code.check(self)
+
+    @visitor(ContinueNode)
+    def check(self, expression: ContinueNode):
+        if self.current_loops <= 0:
+            raise Exception("continue must be inside a for or while loop body")
+
+    @visitor(BreakNode)
+    def check(self, expression: BreakNode):
+        if self.current_loops <= 0:
+            raise Exception("break must be inside a for or while loop body")
 
     @visitor(Literal)
     def check(self, expression: Literal):
@@ -61,14 +72,14 @@ class TypeChecker(metaclass=Singleton):
             scope.declare(expression.variable.text, iterable.list_type)
         else:
             raise TypeError("For can only iterate over a list or a dictionary")
+        self.current_loops += 1
         self.check_block(expression.statements, scope)
+        self.current_loops -= 1
 
     @visitor(ArrayNode)
     def check(self, expression: ArrayNode):
         result = [elem.check(self) for elem in expression.expressions]
         list_type = self.common_type(result)
-        if issubclass(Object, list_type):
-            raise InvalidTypeError("List elements are not of the same type", expression.start.line)
         return TypeList(list_type)
 
     @visitor(DictionaryNode)
@@ -79,8 +90,6 @@ class TypeChecker(metaclass=Singleton):
         values_types = self.common_type(values)
         if issubclass(Object, keys_types):
             raise InvalidTypeError("Dictionary keys are not of the same type", expression.start.line)
-        if issubclass(Object, values_types):
-            raise InvalidTypeError("Dictionary values are not of the same type", expression.start.line)
         if not issubclass(keys_types, Float) and not issubclass(keys_types, String):
             raise InvalidTypeError("Dictionary keys are not immutable", expression.start.line)
         return TypeDict((keys_types, values_types))
@@ -151,7 +160,7 @@ class TypeChecker(metaclass=Singleton):
             variable_type = expression.type.check(self)
             if not self.can_assign(expression_type, variable_type):
                 raise TypeError(
-                    f"Variable {expression.name.text} of type {expression.type.type.text} can't be assigned {expression_type}")
+                    f"Variable {expression.name.text} of type {variable_type} can't be assigned {expression_type}")
             expression_type = variable_type
         else:
             if isinstance(expression_type, Function):
@@ -159,6 +168,8 @@ class TypeChecker(metaclass=Singleton):
                     f"Variable {expression.name.text} can't be assigned {expression_type}")
             if issubclass(expression_type, Null):
                 raise TypeError("Can't infer type of null")
+        if self.scope.exists(expression.name.text):
+            raise Exception(f"Variable {expression.name.text} already exists")
         self.scope.declare(expression.name.text, expression_type)
 
     @visitor(VarType)
@@ -243,7 +254,9 @@ class TypeChecker(metaclass=Singleton):
     def check(self, expression: While):
         if not issubclass(expression.condition.check(self), Boolean):
             raise TypeError(f"while condition is not a boolean value")
+        self.current_loops += 1
         self.check_block(expression.code, Scope(self.scope))
+        self.current_loops -= 1
 
     @visitor(ClassNode)
     def check(self, expression: ClassNode):
@@ -311,6 +324,8 @@ class TypeChecker(metaclass=Singleton):
         var_type = self.scope.get(var)
         for _case in expression.switch_cases:
             c_type = self.get_class(_case.text)
+            if not isinstance(c_type, Class):
+                raise TypeError()
             if not self.can_assign(var_type, c_type) and not self.can_assign(c_type, var_type):
                 raise TypeError(f"Can't cast {var_type} to {c_type}")
             scope = Scope(self.scope)
@@ -372,8 +387,8 @@ class TypeChecker(metaclass=Singleton):
                 if len(function.param_types) != len(current.param_types):
                     raise TypeError("Function must have same number of arguments as in parent class")
                 for i, j in zip(current.param_types, function.param_types):
-                    if not TypeChecker.can_assign(i, j):
-                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, not {i}")
+                    if not TypeChecker.can_assign(j, i):
+                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, can't be of type {i} in class {cls}")
                 if not TypeChecker.can_assign(current.return_type, function.return_type):
                     raise TypeError(
                         f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
@@ -409,6 +424,8 @@ class TypeChecker(metaclass=Singleton):
                 return True
             return TypeChecker.can_assign(type1.key_type, type2.key_type) and \
                    TypeChecker.can_assign(type1.value_type, type2.value_type)
+        if issubclass(type1, Null) and isinstance(type2, Class):
+            return True
         return issubclass(type1, type2)
 
     @staticmethod
