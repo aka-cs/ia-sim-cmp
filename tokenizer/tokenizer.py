@@ -71,7 +71,7 @@ class Tokenizer:
             i += length
             token_type = self.automata.get_type(self.automata.current)
             
-            if token_type == TokenType.LINEBREAK:
+            if token_type == TokenType.LINEBREAK or token_type == TokenType.COMMENT:
                 line += 1
                 column = 0
                 continue
