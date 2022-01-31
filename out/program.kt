@@ -1,9 +1,8 @@
-Position::Place{
+Place::Position{
     fun init(name: String, x: Int, y: Int): void{
+        super.init(name);
         // Clase posicion.
-
         // Instanciamos la clase lugar, con el nombre.
-        super(name);
 
         // Instanciamos las coordenadas.
         attr x = x;
@@ -12,12 +11,12 @@ Position::Place{
 }
 
 
-Person::Cargo{
+Cargo::Person{
     fun init(identifier: Int, position: Position, destiny: Position, payment: Int, final_time: Int): void{
+        super.init(identifier, position);
         // Clase persona.
-
         // Instanciamos la clase carga (de la que hereda persona) con el identificador y la posicion.
-        super(identifier, position);
+
         // Destino de la persona, o sea, a donde se dirige.
         attr destiny: Position = destiny;
         // Dinero que ofrece la persona por ser transportada.
@@ -44,13 +43,13 @@ Person::Cargo{
 }
 
 
-Taxi::Vehicle
+Vehicle::Taxi
 {
     fun init(identifier: Int, position: Place): void{
+        super.init(identifier, position);
         // Clase vehiculo.
-
         // Instanciamos la clase vehiculo (de la que hereda taxi) con el identificador y la posicion.
-        super(identifier, position);
+
         // Instanciamos la inteligencia artificial del taxi con AStarT (AStar para la clase Taxi).
         self.IA = AStarT();
     }
@@ -65,8 +64,8 @@ Taxi::Vehicle
         var map_object: List<MapObject> = graph.get_objects(self.position)[0];
 
         // Comprobamos el objeto en la posicion actual.
+        // Solo nos interesa si es una persona (el taxi solo carga personas).
         switch map_object:
-            // Solo nos interesa si es una persona (el taxi solo carga personas).
             case Person{
                 // Si esta persona reservo este taxi la montamos, y retornamos
                 // dado que es la unica que montara este taxi.
@@ -118,8 +117,8 @@ AStar::AStarT{
                     switch destiny:
                         case Position{
                             // Comprobamos el objeto en la posicion actual.
+                            // Solo nos interesa si es una persona (el taxi solo carga personas).
                             switch map_object:
-                                // Solo nos interesa si es una persona (el taxi solo carga personas).
                                 case Person{
                                     // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica
                                     // para esta persona, y retornamos este valor, dado que es la unica persona en
@@ -149,8 +148,8 @@ AStar::AStarT{
         switch taxi:
             case Taxi{
                 // Comprobamos el objeto en la posicion actual.
+                // Solo nos interesa si es una persona (el taxi solo carga personas).
                 switch map_object:
-                    // Solo nos interesa si es una persona (el taxi solo carga personas).
                     case Person{
                         // Si esta persona no ha reservado taxi la marcamos como reservada para este,
                         // puesto que es la unica en esta posicion, y esta es la posicion objetivo
@@ -162,7 +161,7 @@ AStar::AStarT{
             }
 
         // Retornamos.
-        return
+        return;
     }
 }
 
