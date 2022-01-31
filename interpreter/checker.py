@@ -388,7 +388,7 @@ class TypeChecker(metaclass=Singleton):
                     function = cls.scope.father.get(member)
                 except:
                     continue
-                if function.name == "init":
+                if current.name == "init":
                     continue
                 if len(function.param_types) != len(current.param_types):
                     raise InvalidMethodDeclaration("Function must have same number of arguments as in parent class",
