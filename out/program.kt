@@ -1,8 +1,9 @@
 Place::Position{
     fun init(name: String, x: Int, y: Int): void{
-        super.init(name);
         // Clase posicion.
-        // Instanciamos la clase lugar, con el nombre.
+
+        // Instanciamos la clase lugar (de la que heresa posicion), con el nombre.
+        super.init(name);
 
         // Instanciamos las coordenadas.
         attr x = x;
@@ -13,9 +14,10 @@ Place::Position{
 
 Cargo::Person{
     fun init(identifier: Int, position: Position, destiny: Position, payment: Int, final_time: Int): void{
-        super.init(identifier, position);
         // Clase persona.
+
         // Instanciamos la clase carga (de la que hereda persona) con el identificador y la posicion.
+        super.init(identifier, position);
 
         // Destino de la persona, o sea, a donde se dirige.
         attr destiny: Position = destiny;
@@ -27,7 +29,7 @@ Cargo::Person{
         attr final_time: Int = final_time;
     }
 
-    fun update_state(env: Environment, event: Event): List<Event>{
+    fun update_state(env: Environment, event: Event): list<Event>{
         // Actualiza el estado de la persona.
 
         // Si la persona no ha reservado un vehiculo, y se le acabo el tiempo,
@@ -39,6 +41,9 @@ Cargo::Person{
             // Lanzamos el evento de eliminacion.
             return [DeleteEvent(0, event.time + 1, self.identifier, self.position)];
         }
+
+        // En caso contrario, devolvemos una lista vacia.
+        return [];
     }
 }
 
@@ -46,22 +51,23 @@ Cargo::Person{
 Vehicle::Taxi
 {
     fun init(identifier: Int, position: Place): void{
-        super.init(identifier, position);
         // Clase vehiculo.
+
         // Instanciamos la clase vehiculo (de la que hereda taxi) con el identificador y la posicion.
+        super.init(identifier, position, [], []);
 
         // Instanciamos la inteligencia artificial del taxi con AStarT (AStar para la clase Taxi).
-        self.IA = AStarT();
+        attr IA: AStarT = AStarT();
     }
 
-    fun something_to_charge(env: Environment): List<Person>{
+    fun something_to_charge(env: Environment): list<Person>{
         // Verifica si en la posicion actual hay objetos que cargar, y en caso positivo, devuelve una
         // lista de ellos.
         // En el caso del taxi, dado que carga una sola persona a la vez, la lista siempre sera unaria.
 
         // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
         // posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-        var map_object: List<MapObject> = graph.get_objects(self.position)[0];
+        var map_object: list<MapObject> = graph.get_objects(self.position)[0];
 
         // Comprobamos el objeto en la posicion actual.
         // Solo nos interesa si es una persona (el taxi solo carga personas).
@@ -78,7 +84,7 @@ Vehicle::Taxi
         return [];
     }
 
-    fun next_objective(positions: List<Place>, env: Environment): List<Position>{
+    fun next_objective(positions: list<Place>, env: Environment): list<Position>{
         // Encuentra el proximo objetivo del taxi en base a un comportamiento definido.
 
         // El proximo objetivo esta determinado por la IA del taxi.
@@ -100,7 +106,7 @@ AStar::AStarT{
         return distance + destiny_distance - person.payment;
     }
 
-    fun h(current: Place, destinations: List<Place>, taxi: MapObject, taxis: List<MapObject>,
+    fun h(current: Place, destinations: list<Place>, taxi: MapObject, taxis: list<MapObject>,
         graph: Environment): Float{
         // Heuristica de AStarT.
 
@@ -111,7 +117,7 @@ AStar::AStarT{
                 for(var destiny : destinations){
                     // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
                     // posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-                    var map_object: List<MapObject> = graph.get_objects(self.position)[0];
+                    var map_object: list<MapObject> = graph.get_objects(self.position)[0];
 
                     // Comprobamos si el destino es una posicion.
                     switch destiny:
@@ -136,13 +142,13 @@ AStar::AStarT{
         return infinity();
     }
 
-    fun actualize(current: Place, taxi: MapObject, taxis: List<MapObject>, graph: Environment): void{
+    fun actualize(current: Place, taxi: MapObject, taxis: list<MapObject>, graph: Environment): void{
         // Metodo para actualizar la posicion objetivo del taxi en el entorno,
         // dado el taxi y la posicion afectada.
 
         // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
         // posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-        var map_object: List<MapObject> = graph.get_objects(current)[0];
+        var map_object: list<MapObject> = graph.get_objects(current)[0];
 
         // Comprobamos que el actor principal sea un taxi.
         switch taxi:
@@ -159,15 +165,12 @@ AStar::AStarT{
                         }
                     }
             }
-
-        // Retornamos.
-        return;
     }
 }
 
 
 fun main(): void{
-    var places: List<Position> = [Position("Alamar", 10, 20), Position("Vedado", 20, 25),
+    var places: list<Position> = [Position("Alamar", 10, 20), Position("Vedado", 20, 25),
                                 Position("10 de Octubre", 30, 35)];
 
     var graph_places: dict<String, Place> = {places[0].name : places[0], places[1].name : places[1],
