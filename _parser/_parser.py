@@ -145,7 +145,7 @@ class Parser(metaclass=Singleton):
                      lambda x: GetNode(x[0], x[2]), lambda x: Variable(x[0]), lambda x: x[0]),
             p_get > (
                 p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super | p_index,
-                lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2]),
+                lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2], x[1].line),
                 lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode(), lambda x: x[0]),
             p_index > (p_call + open_br + p_expression + close_br, lambda x: Index(x[0], x[2])),
 

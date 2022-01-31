@@ -61,3 +61,10 @@ class InvalidMethodDeclaration(Exception):
         super().__init__()
         self.message = message
         self.line = line
+
+
+class InvalidCall(Exception):
+    def __init__(self, message, line):
+        super().__init__()
+        self.message = message
+        self.line = line

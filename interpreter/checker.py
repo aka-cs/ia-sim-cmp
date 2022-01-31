@@ -201,13 +201,13 @@ class TypeChecker(metaclass=Singleton):
         if not isinstance(called, Function):
             raise TypeError()
         if len(expression.arguments) != len(called.param_types):
-            raise Exception("Invalid number of arguments")
+            raise InvalidCall("Invalid number of arguments", expression.line)
         for arg, param in zip(expression.arguments, called.param_types):
             arg_type = arg.check(self)
             if param is Type and isinstance(arg_type, Function):
                 continue
             if not self.can_assign(arg_type, param):
-                raise TypeError(f"Function with argument type {param} can't receive {arg_type}")
+                raise InvalidCall(f"Function with argument type {param} can't receive {arg_type}", expression.line)
         return called.return_type
 
     @visitor(FunctionNode)

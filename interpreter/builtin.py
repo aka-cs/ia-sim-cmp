@@ -48,6 +48,8 @@ def get_classes(module=builtin_code) -> [Class]:
             c_class.scope.declare(var, _type)
         super_class = _class[1].__base__ if _class[1].__base__ != object else None
         c_class.super_class = super_class
+        if super_class:
+            c_class.scope.father = type_map[_class[1].__base__].scope
         result.append(c_class)
     return result
 
