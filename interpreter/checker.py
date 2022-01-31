@@ -315,7 +315,8 @@ class TypeChecker(metaclass=Singleton):
             attr_type = expression.type.check(self)
             if not self.can_assign(expression_type, attr_type):
                 raise TypeError(
-                    f"Attribute {expression.name.text} of type {expression.type.type.text} can't be assigned {expression_type}")
+                    f"Attribute {expression.name.text} of type {expression.type.type.text} can't be assigned "
+                    f"{expression_type}")
             expression_type = attr_type
         else:
             if issubclass(expression_type, Null):
@@ -336,7 +337,7 @@ class TypeChecker(metaclass=Singleton):
             scope.declare(var, c_type)
             self.check_block(expression.switch_cases[_case], scope)
         self.check_block(expression.default, self.scope)
-        
+
     @visitor(CommentNode)
     def check(self, expression: CommentNode):
         pass

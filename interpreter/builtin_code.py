@@ -33,11 +33,14 @@ class MapObject:
 
 
 @dataclass
-class Cargo:
+class Cargo(MapObject):
     """
     Clase carga. Engloba los objeto cargables/transportables por un vehículo.
     """
-    pass
+
+    @abstractmethod
+    def update_state(self, env: Environment, event: Event) -> [Event]:
+        pass
 
 
 @dataclass
