@@ -62,6 +62,7 @@ class Grouping(Node):
 class Call(Node):
     called: Node
     arguments: [Node]
+    line: int
 
 
 @dataclass
