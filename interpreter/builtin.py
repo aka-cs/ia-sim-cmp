@@ -37,7 +37,7 @@ def get_classes(module=builtin_code) -> [Class]:
     result = []
     while len(created) != len(classes):
         for _class in classes:
-            if _class[1].__base__ == object or _class[1].__base__ in created:
+            if _class[1] not in created and (_class[1].__base__ == object or _class[1].__base__ in created):
                 super_class = _class[1].__base__ if _class[1].__base__ != object else None
                 scope = Scope()
                 c_class = Class(_class[0], type_map[super_class] if super_class else None, scope)

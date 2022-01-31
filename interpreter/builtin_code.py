@@ -341,7 +341,6 @@ class AStar:
         """
         Algoritmo AStar.
         """
-
         # Conjunto salida.
         open_lst = {origin}
 
