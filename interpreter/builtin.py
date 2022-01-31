@@ -87,6 +87,6 @@ builtin_functions: [Function] = [
     Function("isinstance", [Object, Type], Boolean),
     Function("max", [Float, Float], Float),
     Function("min", [Float, Float], Float),
-    Function("pow", [Float], Float),
+    Function("pow", [Float, Float], Float),
     *get_functions()
 ]

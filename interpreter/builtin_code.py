@@ -203,14 +203,6 @@ class Vehicle(MapObject):
         # no lanzamos nada.
         return [MovementEvent(self.identifier, event.time + 1)] if len(self.tour) != 0 else []
 
-    @abstractmethod
-    def something_to_charge(self, env: Environment) -> [Cargo]:
-        """
-        Indica si hay elementos de carga en la posición actual del vehículo dentro del ambiente
-        simulado. En caso afirmativo devuelve una lista con los elementos cargables.
-        """
-        pass
-
     def load(self, cargo_id: int, env: Environment) -> None:
         """
         Carga el elemento en la posición actual con el identificador especificado.
@@ -236,6 +228,14 @@ class Vehicle(MapObject):
                 self.cargos[i], self.cargos[-1] = self.cargos[-1], self.cargos[i]
                 self.cargos.pop()
                 break
+
+    @abstractmethod
+    def something_to_charge(self, env: Environment) -> [Cargo]:
+        """
+        Indica si hay elementos de carga en la posición actual del vehículo dentro del ambiente
+        simulado. En caso afirmativo devuelve una lista con los elementos cargables.
+        """
+        pass
 
     @abstractmethod
     def get_objectives(self, env: Environment) -> [Place]:
@@ -337,7 +337,7 @@ class AStar:
         pass
 
     def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
-                  graph: GraphEnvironment) -> [str]:
+                  graph: GraphEnvironment) -> [Place]:
         """
         Algoritmo AStar.
         """
@@ -423,7 +423,7 @@ class AStar:
         return []
 
 
-def infinity():
+def infinity() -> float:
     return inf
 
 
