@@ -2,7 +2,7 @@ import inspect
 
 from . import builtin_code
 from .builtin_code import *
-from .functions import BuiltinFunction
+from .functions import Function
 from ._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
 from .classes import Class
 from .scope import Scope
@@ -14,11 +14,11 @@ type_map = {type: Type, int: Int, float: Float, object: Object, bool: Boolean, s
 def get_type(_type: str | type):
     if isinstance(_type, str):
         if _type[0] == "[" and _type[-1] == "]":
-            return TypeList(get_type(_type[1:-1].strip()))
-        if _type[0] == "{" and _type[-1] == "}":
-            _type = _type[1:-1]
-            types = _type.split(":", maxsplit=1)
-            return TypeDict((get_type(types[0].strip()), get_type(types[1].strip())))
+            return TypeList(get_type(_type[1:-1]))
+        if _type.startswith("dict"):
+            _type = _type[5:-1]
+            types = _type.split(", ")
+            return TypeDict((get_type(types[0]), get_type(types[1])))
         _type = eval(_type)
     return type_map.get(_type, _type)
 
@@ -52,13 +52,13 @@ def get_classes(module=builtin_code) -> [Class]:
     return result
 
 
-def get_builtin_function(function) -> BuiltinFunction:
+def get_builtin_function(function) -> Function:
     _annotations = inspect.get_annotations(function[1])
     params = [get_type(_annotations[var]) for var in _annotations if var != 'return']
-    return BuiltinFunction(function[0], params, get_type(_annotations.get('return', None)))
+    return Function(function[0], params, get_type(_annotations.get('return', None)))
 
 
-def get_functions(module=builtin_code) -> [BuiltinFunction]:
+def get_functions(module=builtin_code) -> [Function]:
     functions = inspect.getmembers(module, inspect.isfunction)
     result = []
     for function in functions:
@@ -77,6 +77,10 @@ def get_code(file: str) -> [str]:
 
 builtin_classes: [Class] = [*get_classes()]
 
+builtin_functions: [Function] = [
+    Function("print", [Object], Null),
+    Function("len", [List], Int),
+    Function("isinstance", [Object, Type], Boolean),
 builtin_functions: [BuiltinFunction] = [
     BuiltinFunction("print", [Object], Null),
     BuiltinFunction("len", [List], Int),
