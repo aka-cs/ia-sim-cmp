@@ -25,6 +25,7 @@ class TypeChecker(metaclass=Singleton):
 
     def start(self, expressions: [Node]):
         self.check_functions_in_scope(self.scope, expressions)
+        self.check_classes_in_scope(self.scope, expressions)
         if "main" not in self.scope.variables:
             raise MissingMainError()
         main: Function = self.scope.get("main")
@@ -151,7 +152,10 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(Variable)
     def check(self, expression: Variable):
-        return self.check_scope(expression.name.text)
+        try:
+            return self.check_scope(expression.name.text)
+        except:
+            raise NameNotInScope(f"{expression.name.text} not defined in current scope", expression.name)
 
     @visitor(VarDeclaration)
     def check(self, expression: VarDeclaration):
@@ -264,28 +268,11 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(ClassNode)
     def check(self, expression: ClassNode):
-        scope = Scope(self.scope)
-        if expression.superclass:
-            super_class = self.get_class(expression.superclass.text)
-        else:
-            super_class = None
-        created = Class(expression.name.text, super_class, scope)
-        self.types.append(created)
-        self.check_functions_in_scope(scope, expression.methods)
-        params = []
-        try:
-            init = getattr(created, "init")
-            if not issubclass(init.return_type, Null):
-                raise Exception("init method must have void return type")
-            params = init.param_types
-        except TypeError:
-            pass
+        created = self.get_class(expression.name.text)
         self.current_class = created
-        self.scope.declare(expression.name.text, Function(created.name, params, created))
         expression.methods.sort(key=lambda x: {"init": 0}.get(x.name.text, 1))
-        self.check_block(expression.methods, scope)
+        self.check_block(expression.methods, created.scope)
         self.current_class = None
-        self.check_class_inheritance(created)
 
     @visitor(SelfNode)
     def check(self, _):
@@ -365,6 +352,37 @@ class TypeChecker(metaclass=Singleton):
                 else:
                     return_type = node.return_type.check(self)
                 scope.declare(node.name.text, Function(node.name.text, params, return_type, node.name.line))
+
+    def check_classes_in_scope(self, scope: Scope, nodes: [Node]):
+        for _node in nodes:
+            node = _node
+            if isinstance(_node, Statement):
+                node = _node.code
+            if isinstance(node, ClassNode):
+                scope = Scope(self.scope)
+                if node.superclass:
+                    super_class = self.get_class(node.superclass.text)
+                else:
+                    super_class = None
+                created = Class(node.name.text, super_class, scope)
+                self.types.append(created)
+        for _node in nodes:
+            node = _node
+            if isinstance(_node, Statement):
+                node = _node.code
+            if isinstance(node, ClassNode):
+                c_class = self.get_class(node.name.text)
+                self.check_functions_in_scope(c_class.scope, node.methods)
+                self.check_class_inheritance(c_class)
+                params = []
+                try:
+                    init = getattr(c_class, "init")
+                    if not issubclass(init.return_type, Null):
+                        raise Exception("init method must have void return type")
+                    params = init.param_types
+                except TypeError:
+                    pass
+                self.scope.declare(node.name.text, Function(c_class.name, params, c_class))
 
     def get_class(self, name: str):
         for t in self.types:

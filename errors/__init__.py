@@ -12,5 +12,5 @@ def print_code_error(code: str, token):
 
 
 def print_code_line(code: str, line: int):
-    code_line = code.split('\n')[line - 1]
+    code_line = code.splitlines()[line - 1]
     print(f"{line}|{code_line}", file=stderr)
