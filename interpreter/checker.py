@@ -151,7 +151,10 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(Variable)
     def check(self, expression: Variable):
-        return self.check_scope(expression.name.text)
+        try:
+            return self.check_scope(expression.name.text)
+        except:
+            raise NameNotInScope(f"{expression.name.text} not defined in current scope", expression.name)
 
     @visitor(VarDeclaration)
     def check(self, expression: VarDeclaration):
