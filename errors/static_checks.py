@@ -53,3 +53,11 @@ class NameNotInScope(Exception):
         super().__init__()
         self.message = message
         self.token = token
+
+
+class InvalidMethodDeclaration(Exception):
+
+    def __init__(self, message, line):
+        super().__init__()
+        self.message = message
+        self.line = line

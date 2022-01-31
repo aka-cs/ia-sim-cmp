@@ -53,6 +53,10 @@ if __name__ == '__main__':
         print(e.message, file=stderr)
         print_code_error(program, e.token)
         exit(1)
+    except InvalidMethodDeclaration as e:
+        print(e.message, file=stderr)
+        print_code_line(program, e.line)
+        exit(1)
 
     python_code = ["from builtin_code import *\n\n", *transpiler.transpile(ast)]
     with open('out/program.py', 'w') as f:

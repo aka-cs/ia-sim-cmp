@@ -15,7 +15,7 @@ class TokenMatcher:
         self.regex = regex
         self.token_type = token_type
         self._automata = None
-        
+    
     @property
     def automata(self):
         if not self._automata:
@@ -25,7 +25,7 @@ class TokenMatcher:
     @automata.setter
     def automata(self, automata):
         self._automata = automata
-        
+    
     def __hash__(self):
         return hash((self.regex, self.token_type))
     
@@ -53,10 +53,10 @@ class Tokenizer:
                 os.makedirs(path, exist_ok=True)
                 pickle.dump(self.automata, open(f'{path}/tokenizer_automata.pkl', 'wb'))
                 pickle.dump(self.token_matchers, open(f'{path}/token_matchers.pkl', 'wb'))
-
+    
     def tokenize(self, program: str) -> [Token]:
         return self.automata_tokenize(program)
-        
+    
     def automata_tokenize(self, program: str) -> [Token]:
         tokens = []
         line = column = 1
@@ -71,23 +71,27 @@ class Tokenizer:
             i += length
             token_type = self.automata.get_type(self.automata.current)
             
+            if token_type == TokenType.COMMENT and \
+                    (not tokens or tokens[-1].type not in [TokenType.COMMENT, TokenType.SEMICOLON, TokenType.OPEN_BRACES]):
+                line += 1
+                column = 0
+                continue
+            
             if token_type == TokenType.LINEBREAK:
                 line += 1
                 column = 0
                 continue
-                
+            
             if token_type == TokenType.SPACE:
                 column += 1
                 continue
-
+            
             if token_type == TokenType.TAB:
                 column += 4
                 continue
             
             tokens.append(Token(line, column, token_type, match))
             column += length
-
+        
         tokens.append(Token(line, column + 1, TokenType.EOF, ""))
         return tokens
-            
-    

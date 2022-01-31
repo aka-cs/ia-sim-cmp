@@ -391,13 +391,16 @@ class TypeChecker(metaclass=Singleton):
                 if function.name == "init":
                     continue
                 if len(function.param_types) != len(current.param_types):
-                    raise TypeError("Function must have same number of arguments as in parent class")
+                    raise InvalidMethodDeclaration("Function must have same number of arguments as in parent class",
+                                                   current.line)
                 for i, j in zip(current.param_types, function.param_types):
                     if not TypeChecker.can_assign(j, i):
-                        raise TypeError(f"Parameter in {member} defined in parent class as {j} type, can't be of type {i} in class {cls}")
+                        raise InvalidMethodDeclaration(f"Parameter in {member} defined in parent class as {j} "
+                                                       f"type, can't be of type {i} in class {cls}", current.line)
                 if not TypeChecker.can_assign(current.return_type, function.return_type):
-                    raise TypeError(
-                        f"Return type defined in parent class as {function.return_type} type, not {current.return_type}")
+                    raise InvalidMethodDeclaration(
+                        f"Return type defined in parent class as {function.return_type} type, not {current.return_type}",
+                        current.line)
             else:
                 try:
                     variable = cls.scope.father.get(member)
