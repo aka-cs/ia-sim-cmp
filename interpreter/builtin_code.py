@@ -145,9 +145,9 @@ class Vehicle(MapObject):
     Clase vehículo. Define los diferentes transportes del entorno simulado.
     """
     # Carga que actualmente desplaza el vehículo.
-    cargos: [Cargo] = field(default_factory=list)
+    cargos: [Cargo]
     # Recorrido del vehículo.
-    tour: [str] = field(default_factory=list)
+    tour: [str]
 
     def update_state(self, env: Environment, event: Event) -> [Event]:
         """
@@ -242,7 +242,7 @@ class Vehicle(MapObject):
         pass
 
     @abstractmethod
-    def next_objective(self, places: str, env: Environment) -> [Place]:
+    def next_objective(self, places: [Place], env: Environment) -> [Place]:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
