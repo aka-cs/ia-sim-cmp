@@ -225,10 +225,11 @@ class Boolean(Object, metaclass=TypeBool):
 class TypeList(Type):
 
     def __new__(mcs, list_type):
-        mcs.list_type = list_type
-        mcs.append = Function("append", [list_type], Null)
-        mcs.remove = Function("remove", [list_type], Null)
-        return super().__new__(mcs, "List", (List,), {'list_type': list_type})
+        created = super().__new__(mcs, "List", (List,), {'list_type': list_type})
+        created.list_type = list_type
+        created.append = Function("append", [list_type], Null)
+        created.remove = Function("remove", [list_type], Null)
+        return created
 
     def __getitem__(cls, item):
         if not issubclass(item, Int):
@@ -258,10 +259,11 @@ class List(Object):
 class TypeDict(Type):
 
     def __new__(mcs, types):
-        mcs.key_type = types[0]
-        mcs.value_type = types[1]
-        mcs.keys = Function("keys", [], TypeList(mcs.key_type))
-        return super().__new__(mcs, "Dict", (Dict,), {'key_type': types[0], 'value_type': types[1]})
+        created = super().__new__(mcs, "Dict", (Dict,), {'key_type': types[0], 'value_type': types[1]})
+        created.key_type = types[0]
+        created.value_type = types[1]
+        created.keys = Function("keys", [], TypeList(mcs.key_type))
+        return created
 
     def __getitem__(cls, item):
         if not issubclass(item, cls.key_type) and not issubclass(cls.key_type, item):
