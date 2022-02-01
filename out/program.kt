@@ -36,7 +36,7 @@ Cargo::Person{
 
         // Si la persona no ha reservado un vehiculo, y se le acabo el tiempo,
         // lanza un evento de eliminacion (la persona es retirada del entorno simulado).
-        if(self.reserved_id == 0 && event.time >= final_time){
+        if(self.reserved_id == 0 && event.time >= self.final_time){
             // Le colocamos un valor de reserva absurdo, para que no vuelva a ser escogida
             // hasta su eliminacion.
             self.reserved_id = -1;
@@ -67,23 +67,58 @@ Vehicle::Taxi
         // lista de ellos.
         // En el caso del taxi, dado que carga una sola persona a la vez, la lista siempre sera unaria.
 
-        // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
-        // posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-        var map_object: MapObject = env.get_all_objects(self.position)[0];
+        // Obtenemos la lista de objetos en la posicion actual.
+        var map_objects: list<MapObject> = env.get_all_objects(self.position);
 
-        // Comprobamos el objeto en la posicion actual.
-        // Solo nos interesa si es una persona (el taxi solo carga personas).
-        switch map_object:
-            case Person{
-                // Si esta persona reservo este taxi la montamos, y retornamos
-                // dado que es la unica que montara este taxi.
-                if(map_object.reserved_id == self.identifier){
-                    return [map_object];
+        // Para este problema trivial, en cada posicion del entorno habra solo un objeto,
+        // por lo que la lista sera unaria.
+        if(len(map_objects) == 1){
+            // Comprobamos el objeto en la posicion actual.
+            // Solo nos interesa si es una persona (el taxi solo carga personas).
+            var map_object: MapObject = map_objects[0];
+            switch map_object:
+                case Person{
+                    // Si esta persona reservo este taxi la montamos, y retornamos
+                    // dado que es la unica que montara este taxi.
+                    if(map_object.reserved_id == self.identifier){
+                        return [map_object];
+                    }
                 }
-            }
+        }
 
         // En cualquier otro caso devolvemos una lista vacia.
         return [];
+    }
+
+    fun get_objectives(env: Environment): list<Position>{
+        // Localiza los posibles objetivos del taxi en el entorno.
+
+        // Localizaciones del entorno.
+        var places: list<Place> = env.get_places();
+        // Lista de posiciones objetivo.
+        var objective_positions: list<Position> = [];
+
+        // Por cada localizacion del entorno.
+        for(var place: places){
+            // Obtenemos la lista de objetos en la posicion actual.
+            var map_objects: list<MapObject> = env.get_all_objects(place);
+
+            //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
+            // por lo que la lista sera unaria.
+            if(len(map_objects) == 1){
+                // Comprobamos el objeto en la posicion actual.
+                // Solo nos interesa si es una persona (el taxi solo carga personas).
+                var map_object: MapObject = map_objects[0];
+                switch map_object:
+                    case Person{
+                            // Si es una persona, adicionamos su posicion a la lista.
+                            objective_positions.append(map_object.position);
+                    }
+            }
+        }
+
+        // Devolvemos la lista de posiciones.
+        return objective_positions;
     }
 
     fun next_objective(positions: list<Place>, env: Environment): list<Position>{
@@ -123,21 +158,25 @@ AStar::AStarT{
             case Position{
                 // Por cada localizacion destino posible.
                 for(var destiny : destinations){
-                    // Obtenemos la lista de objetos en la localizacion actual. Para este problema trivial,
-                    // en cada posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-                    var map_object: MapObject = graph.get_all_objects(destiny)[0];
+                    // Obtenemos la lista de objetos en la localizacion actual.
+                    var map_objects: list<MapObject> = graph.get_all_objects(destiny);
 
-                    // Comprobamos el objeto en la posicion actual.
-                    // Solo nos interesa si es una persona (el taxi solo carga personas).
-                    switch map_object:
-                        case Person{
-                            // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica
-                            // para esta persona, y retornamos este valor, dado que es la unica persona en
-                            // esta posicion.
-                            if(map_object.reserved_id == 0){
-                                return measure(current,  map_object);
+                    //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
+                    // por lo que la lista sera unaria.
+                    if(len(map_objects) == 1){
+                        // Comprobamos el objeto en la posicion actual.
+                        // Solo nos interesa si es una persona (el taxi solo carga personas).
+                        var map_object: MapObject = map_objects[0];
+                        switch map_object:
+                            case Person{
+                                // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica
+                                // para esta persona, y retornamos este valor, dado que es la unica persona en
+                                // esta posicion.
+                                if(map_object.reserved_id == 0){
+                                    return measure(current,  map_object);
+                                }
                             }
-                        }
+                    }
                 }
             }
 
@@ -149,25 +188,29 @@ AStar::AStarT{
         // Metodo para actualizar la posicion objetivo del taxi en el entorno,
         // dado el taxi y la posicion afectada.
 
-        // Obtenemos la lista de objetos en la posicion actual. Para este problema trivial, en cada
-        // posicion del entorno habra solo un objeto, por lo que la lista sera unaria.
-        var map_object: MapObject = graph.get_all_objects(current)[0];
+        // Obtenemos la lista de objetos en la posicion actual.
+        var map_objects: list<MapObject> = graph.get_all_objects(current);
 
-        // Comprobamos que el actor principal sea un taxi.
-        switch taxi:
-            case Taxi{
-                // Comprobamos el objeto en la posicion actual.
-                // Solo nos interesa si es una persona (el taxi solo carga personas).
-                switch map_object:
-                    case Person{
-                        // Si esta persona no ha reservado taxi la marcamos como reservada para este,
-                        // puesto que es la unica en esta posicion, y esta es la posicion objetivo
-                        // del taxi.
-                        if(map_object.reserved_id == 0){
-                            map_object.reserved_id = taxis[0].identifier;
+        //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
+        // por lo que la lista sera unaria.
+        if(len(map_objects) == 1){
+            // Comprobamos que el actor principal sea un taxi.
+            switch taxi:
+                case Taxi{
+                    // Comprobamos el objeto en la posicion actual.
+                    // Solo nos interesa si es una persona (el taxi solo carga personas).
+                    var map_object: MapObject = map_objects[0];
+                    switch map_object:
+                        case Person{
+                            // Si esta persona no ha reservado taxi la marcamos como reservada para este,
+                            // puesto que es la unica en esta posicion, y esta es la posicion objetivo
+                            // del taxi.
+                            if(map_object.reserved_id == 0){
+                                map_object.reserved_id = taxis[0].identifier;
+                            }
                         }
-                    }
-            }
+                }
+        }
     }
 
     fun algorithm(current: Place, destinations: list<Place>, taxi: MapObject, taxis: list<MapObject>,
@@ -192,12 +235,12 @@ fun main(): void{
     var places: list<Position> = [Position("Alamar", 10, 20), Position("Vedado", 20, 25),
                                 Position("10 de Octubre", 30, 35)];
 
-    var graph_places: dict<String, Place> = {places[0].name : places[0], places[1].name : places[1],
-                                                places[2].name : places[2]};
+    var graph_places: dict<String, Place> = {places[0].place_name : places[0], places[1].place_name : places[1],
+                                                places[2].place_name : places[2]};
     var graph_edges: dict<String, dict<String, Float>> = {"Alamar": {"Vedado" : 25, "10 de Octubre": 30},
                                                           "Vedado": {"10 de Octubre": 10},
                                                           "10 de Octubre": {"Vedado": 10}};
-    var graph_objects: dict<String, dict<Int, Float>> = {"Alamar": {1 : Person(1, places[0], places[1], 1000, 100)},
+    var graph_objects: dict<String, dict<Int, Person>> = {"Alamar": {1 : Person(1, places[0], places[1], 1000, 100)},
                                                        "Vedado": {2 : Person(2, places[1], places[2], 1000, 100)}};
     var env: GraphEnvironment = GraphEnvironment(graph_edges, graph_places, graph_objects);
     var total_time: Int = 1000;

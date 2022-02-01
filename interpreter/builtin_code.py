@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from math import inf, pow
 from abc import abstractmethod
 import heapq
+from typing import Union
 
 
 @dataclass
@@ -11,7 +12,7 @@ class Place:
     Clase lugar. Define las diferentes localizaciones del entorno simulado.
     """
     # Nombre para identificar la localización.
-    name: str
+    place_name: str
 
 
 @dataclass
@@ -99,6 +100,13 @@ class DownloadEvent(Event):
 
 @dataclass
 class Environment:
+    @abstractmethod
+    def get_place(self, name: str) -> Place:
+        """
+        Devuelve las localizaciones del entorno simulado.
+        """
+        pass
+
     @abstractmethod
     def get_places(self) -> [Place]:
         """
@@ -264,11 +272,17 @@ class GraphEnvironment(Environment):
     places: {str: Place}
     objects: {str: {int: MapObject}}
 
+    def get_place(self, name) -> Place:
+        """
+        Devuelve las localizaciones del entorno simulado.
+        """
+        return self.places.get(name, None)
+
     def get_places(self) -> [Place]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
-        return [place for place in self.places.value()]
+        return [place for place in self.places.values()]
 
     def update_state(self, event: Event) -> [Event]:
         """
@@ -283,32 +297,35 @@ class GraphEnvironment(Environment):
         elif isinstance(event, SetEvent):
             self.set_object(event.object)
 
+        # No lanzamos ningún otro evento.
+        return []
+
     def get_all_objects(self, position: Place) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
-        return [element for element in self.objects.get(position.name, {}).values()]
+        return [element for element in self.objects.get(position.place_name, {}).values()]
 
     def get_object(self, position: Place, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
-        if position in self.objects and identifier in self.objects[position]:
-            return self.objects[position.name][identifier]
+        if position.place_name in self.objects and identifier in self.objects[position.place_name]:
+            return self.objects[position.place_name][identifier]
 
     def set_object(self, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if element.position.name in self.objects:
-            self.objects[element.position.name][element.identifier] = element
+        if element.position.place_name in self.objects:
+            self.objects[element.position.place_name][element.identifier] = element
 
     def remove_object(self, position: Place, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
-        if position.name in self.objects and identifier in self.objects[position.name]:
-            del self.objects[position.name][identifier]
+        if position.place_name in self.objects and identifier in self.objects[position.place_name]:
+            del self.objects[position.place_name][identifier]
 
 
 class AStar:
@@ -342,48 +359,48 @@ class AStar:
         Algoritmo AStar.
         """
         # Conjunto salida.
-        open_lst = {origin}
+        open_lst: {str} = {origin.place_name}
 
         # Conjunto llegada.
-        closed_lst = set()
+        closed_lst: {str} = set()
 
         # Lista de distancias.
-        distances = dict()
+        distances: {str: float} = dict()
         # La distancia del origen al origen es 0.
-        distances[origin] = 0
+        distances[origin.place_name] = 0
 
         # Lista de padres (es una forma de representar el ast asociado al recorrido que
         # realiza AStar sobre el grafo).
-        parents = dict()
+        parents: {str, str} = dict()
         # El origen es su propio padre (es el inicio del camino).
-        parents[origin] = origin
+        parents[origin.place_name] = origin.place_name
 
         # Mientras en el conjunto de salida queden elementos.
         while len(open_lst) > 0:
             # Instanciamos el vertice actual con el valor por defecto None.
-            v = None
+            v: Union[str, None] = None
 
             # Por cada vértice w del conjunto salida.
             for w in open_lst:
                 # Si aun no hemos instanciado v o bien el vértice w está más cerca
                 # del conjunto llegada (según la heurística) que v, actualizamos v con w.
                 if v is None or distances[w] + self.h(w, objectives, principal_actor, actors, graph) \
-                        < distances[v] + self.h(v, objectives, principal_actor, actors, graph):
+                        < distances[v] + self.h(graph.get_place(v), objectives, principal_actor, actors, graph):
                     v = w
 
             # Si v esta directamente en el conjunto objetivo.
             if v in objectives:
                 # Actualizamos la posición destino como objetivo del actor principal.
-                self.actualize_objective(v, principal_actor, actors, graph)
+                self.actualize_objective(graph.get_place(v), principal_actor, actors, graph)
 
                 # Variable para guardar el camino.
-                path = []
+                path: [Place] = []
 
                 # Mientras quede camino (mientras no encontremos un nodo que sea su propio padre, o sea,
                 # no encontremos el origen).
                 while parents[v] != v:
                     # Añadimos el vertice al camino.
-                    path.append(v)
+                    path.append(graph.get_place(v))
                     # Nos movemos al vertice padre.
                     v = parents[v]
 
@@ -393,7 +410,7 @@ class AStar:
             # En caso de que v no sea del conjunto objetivo, visitamos cada adyacente w de v.
             for w in graph.edges[v]:
                 # Obtenemos el peso del arco que los une.
-                weight = graph.edges[v][w]
+                weight: float = graph.edges[v][w]
                 # Si w no pertenece al conjunto origen ni al conjunto objetivo.
                 if w not in open_lst and w not in closed_lst:
                     # Lo añadimos al conjunto origen ahora que fue visitado.
