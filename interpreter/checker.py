@@ -290,7 +290,10 @@ class TypeChecker(metaclass=Singleton):
     @visitor(GetNode)
     def check(self, expression: GetNode):
         left: Class = expression.left.check(self)
-        return left.getattr(expression.right.text)
+        try:
+            return left.getattr(expression.right.text)
+        except AttributeError as e:
+            self.error(e.args[0], line=expression.right.line)
 
     @visitor(AttrDeclaration)
     def check(self, expression: AttrDeclaration):
