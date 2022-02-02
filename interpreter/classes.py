@@ -26,7 +26,7 @@ class Class(Type):
     def __str__(self):
         return self.__qualname__
 
-    def __getattr__(self, item):
+    def getattr(self, item):
         try:
             return self.scope.get(item)
         except:

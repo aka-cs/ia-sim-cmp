@@ -25,7 +25,7 @@ class TypeChecker(metaclass=Singleton):
 
     def start(self, expressions: [Node]):
         self.check_functions_in_scope(self.scope, expressions)
-        self.check_classes_in_scope(self.scope, expressions)
+        self.check_classes_in_scope(expressions)
         if "main" not in self.scope.variables:
             raise MissingMainError()
         main: Function = self.scope.get("main")
@@ -229,7 +229,7 @@ class TypeChecker(metaclass=Singleton):
                     raise Exception("init method must call super's init in first statement")
                 if not isinstance(line.called.left, SuperNode) or line.called.right.text != "init":
                     raise Exception("init method must call super's init in first statement")
-        scope = Scope(self.scope)
+        scope = Scope(self.globals)
         for param in expression.params:
             scope.declare(param[0].text, param[1].check(self))
         self.current_function = self.check_scope(expression.name.text)
@@ -289,7 +289,7 @@ class TypeChecker(metaclass=Singleton):
     @visitor(GetNode)
     def check(self, expression: GetNode):
         left: Class = expression.left.check(self)
-        return getattr(left, expression.right.text)
+        return left.getattr(expression.right.text)
 
     @visitor(AttrDeclaration)
     def check(self, expression: AttrDeclaration):
@@ -352,7 +352,7 @@ class TypeChecker(metaclass=Singleton):
                     return_type = node.return_type.check(self)
                 scope.declare(node.name.text, Function(node.name.text, params, return_type, node.name.line))
 
-    def check_classes_in_scope(self, scope: Scope, nodes: [Node]):
+    def check_classes_in_scope(self, nodes: [Node]):
         for _node in nodes:
             node = _node
             if isinstance(_node, Statement):
@@ -375,7 +375,7 @@ class TypeChecker(metaclass=Singleton):
                 self.check_class_inheritance(c_class)
                 params = []
                 try:
-                    init = getattr(c_class, "init")
+                    init = c_class.getattr("init")
                     if not issubclass(init.return_type, Null):
                         raise Exception("init method must have void return type")
                     params = init.param_types

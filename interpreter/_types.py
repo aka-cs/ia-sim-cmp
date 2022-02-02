@@ -40,6 +40,9 @@ class Type(type):
     def __getattr__(self, item):
         raise AttributeNotFound(f"{self} has no attribute {item}")
 
+    def getattr(cls, name):
+        return getattr(cls, name)
+
     def __str__(self):
         return self.__qualname__
 
@@ -262,7 +265,7 @@ class TypeDict(Type):
         created = super().__new__(mcs, "Dict", (Dict,), {'key_type': types[0], 'value_type': types[1]})
         created.key_type = types[0]
         created.value_type = types[1]
-        created.keys = Function("keys", [], TypeList(mcs.key_type))
+        created.keys = Function("keys", [], TypeList(created.key_type))
         return created
 
     def __getitem__(cls, item):
