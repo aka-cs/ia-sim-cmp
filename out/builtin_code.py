@@ -198,22 +198,32 @@ class Vehicle(MapObject):
 
                 # En otro caso, desplazamos el vehículo una casilla.
                 else:
+                    # Lo borramos de la casilla anterior.
+                    env.remove_object(self.position, self.identifier)
+                    # Actualizamos la posición.
                     self.position = self.tour.pop()
+                    # Lo colocamos en la nueva casilla.
+                    env.set_object(self)
 
                     # Si el recorrido terminó, y hay carga.
                     if not self.tour:
                         if self.cargos:
                             # Emitimos la cantidad correspondiente de eventos de descarga.
-                            return [DownloadEvent(self.identifier, cargo.identifier, event.time + 1)
-                                    for cargo in self.cargos]
+                            events: [Event] = [DownloadEvent(self.identifier,  event.time + 1, cargo.identifier)
+                                               for cargo in self.cargos]
+                            # noinspection PyTypeChecker
+                            events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
+                            return events
 
             # Si es un evento de carga, llamamos al método de carga.
             if isinstance(event, LoadEvent):
                 self.load(event.cargo_identifier, env)
+                return []
 
             # Si es un evento de descarga, llamamos al método de carga.
             if isinstance(event, DownloadEvent):
                 self.download(event.cargo_identifier, env)
+                return []
 
         # Si el vehículo está inactivo, busca un nuevo objetivo.
         if not self.tour and not self.cargos:
@@ -221,12 +231,9 @@ class Vehicle(MapObject):
             places = self.get_objectives(env)
             # Calcula el nuevo recorrido.
             self.tour = self.next_objective(places, env)
-            self.tour.reverse()
-            # Retornamos un evento de movimiento.
-            return [MovementEvent(self.identifier, event.time + 1)] if self.tour else []
 
-        # Si no se cumple ninguna condición no lanzamos nada.
-        return []
+        # Retornamos un evento de movimiento si hay camino, en caso contrario no lanzamos evento.
+        return [MovementEvent(self.identifier, event.time + 1)] if self.tour else []
 
     def load(self, cargo_id: int, env: Environment) -> None:
         """
@@ -246,13 +253,20 @@ class Vehicle(MapObject):
         # Obtenemos el elemento.
         for i in range(len(self.cargos)):
             # Obtenemos la carga.
-            cargo = self.cargos[i]
+            cargo: Cargo = self.cargos[i]
             # Si el id de la carga es el especificado, encontramos la carga deseada.
             if cargo.identifier == cargo_id:
+                self.actualize_cargo(cargo, env)
                 env.set_object(cargo)
                 self.cargos[i], self.cargos[-1] = self.cargos[-1], self.cargos[i]
                 self.cargos.pop()
                 break
+
+    def actualize_cargo(self, cargo: Cargo, env: Environment) -> None:
+        """
+        Actualiza el estado de una carga.
+        """
+        cargo.position = self.position
 
     @abstractmethod
     def something_to_charge(self, env: Environment) -> [Cargo]:
@@ -409,6 +423,9 @@ class AStar:
         # Variable que determina si ya se encontró el objetivo.
         objective_found: bool = False
 
+        # Variable para guardar el primer fragmento del recorrido total.
+        objective_path: [Place] = []
+
         # Variable para guardar el camino.
         path: [Place] = []
 
@@ -438,12 +455,17 @@ class AStar:
                     v = parents[v]
 
                 if objective_found:
-                    # Devolvemos el camino.
+                    # Unimos las mitades y devolvemos el camino.
+                    path.extend(objective_path)
                     return path
 
                 else:
                     # Establecemos el nuevo origen.
                     new_origin = path[-1] if path else origin
+
+                    # Guardamos el camino construido y reiniciamos el camino.
+                    objective_path = path
+                    path = []
 
                     # Actualizamos la posición destino como objetivo del actor principal.
                     self.actualize_objective(new_origin, principal_actor, actors, graph)
@@ -531,4 +553,5 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
         print(f"\nIteración: {i}")
         for place in env.get_places():
             for map_object in env.get_all_objects(place):
-                print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier}")
+                print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier} "
+                      f"{[cargo.identifier for cargo in map_object.cargos] if isinstance(map_object, Vehicle) else ''}")
