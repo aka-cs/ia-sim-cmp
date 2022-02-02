@@ -97,11 +97,13 @@ class FunctionNode(Node):
 
 @dataclass
 class Return(Node):
+    start: Token
     expression: Node
 
 
 @dataclass
 class If(Node):
+    start: Token
     condition: Node
     code: [Node]
     else_code: [Node]
@@ -109,6 +111,7 @@ class If(Node):
 
 @dataclass
 class While(Node):
+    start: Token
     condition: Node
     code: [Node]
 
@@ -135,26 +138,27 @@ class ClassNode(Node):
 class Assignment(Node):
     left: Variable | GetNode
     value: Node
+    line: int
 
 
 @dataclass
 class SelfNode(Node):
-    pass
+    token: Token
 
 
 @dataclass
 class SuperNode(Node):
-    pass
+    token: Token
 
 
 @dataclass
 class BreakNode(Node):
-    pass
+    token: Token
 
 
 @dataclass
 class ContinueNode(Node):
-    pass
+    token: Token
 
 
 @dataclass
@@ -178,6 +182,7 @@ class CommentNode(Node):
 
 @dataclass
 class ForNode(Node):
+    start: Token
     variable: Token
     iterable: Node
     statements: [Node]

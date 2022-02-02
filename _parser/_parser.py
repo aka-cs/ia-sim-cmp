@@ -65,11 +65,11 @@ class Parser(metaclass=Singleton):
                            lambda x: Statement(x[0]),
                            lambda x: Statement(x[0])),
 
-            p_continue > (continue_s + semicolon, lambda x: ContinueNode()),
-            p_break > (break_s + semicolon, lambda x: BreakNode()),
+            p_continue > (continue_s + semicolon, lambda x: ContinueNode(x[0])),
+            p_break > (break_s + semicolon, lambda x: BreakNode(x[0])),
 
             p_for > (for_s + open_p + var_s + identifier + colon + p_expression + close_p + open_b + p_statements + close_b,
-                     lambda x: ForNode(x[3], x[5], x[8])),
+                     lambda x: ForNode(x[0], x[3], x[5], x[8])),
             
             p_comment > (comment, lambda x: CommentNode(x[0].text)),
 
@@ -87,13 +87,13 @@ class Parser(metaclass=Singleton):
             p_class_members > (p_fun_declaration + p_class_members | e, lambda x: [x[0], *x[1]], lambda x: []),
 
             p_if > (if_s + open_p + p_expression + close_p + open_b + p_statements + close_b + p_else,
-                    lambda x: If(x[2], x[5], x[7])),
+                    lambda x: If(x[0], x[2], x[5], x[7])),
             p_else > (else_s + open_b + p_statements + close_b | e,
                       lambda x: x[2],
                       lambda x: []),
 
             p_while > (while_s + open_p + p_expression + close_p + open_b + p_statements + close_b,
-                       lambda x: While(x[2], x[5])),
+                       lambda x: While(x[0], x[2], x[5])),
 
             p_var_declaration > (var_s + identifier + p_var_type + equals + p_equality + semicolon,
                                  lambda x: VarDeclaration(x[1], x[2], x[4])),
@@ -104,7 +104,7 @@ class Parser(metaclass=Singleton):
                 identifier + less + p_types + greater | identifier, lambda x: VarType(x[0], *x[2]),
                 lambda x: VarType(x[0])),
             p_types > (p_type | p_type + comma + p_type, lambda x: [x[0]], lambda x: [x[0], x[2]]),
-            p_assign > (p_set + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2])),
+            p_assign > (p_set + equals + p_equality + semicolon, lambda x: Assignment(x[0], x[2], x[1].line)),
             p_fun_declaration > (
                 fun_s + identifier + open_p + p_params + colon + p_type + open_b + p_statements + close_b,
                 lambda x: FunctionNode(x[1], x[3], x[5], x[7])),
@@ -114,7 +114,7 @@ class Parser(metaclass=Singleton):
             p_more_params > (comma + identifier + colon + p_type + p_more_params | close_p,
                              lambda x: [(x[1], x[3]), *x[4]], lambda x: []),
 
-            p_return > (return_s + p_return_arg, lambda x: Return(x[1])),
+            p_return > (return_s + p_return_arg, lambda x: Return(x[0], x[1])),
             p_return_arg > (p_expression + semicolon | semicolon, lambda x: x[0], lambda x: None),
 
             p_expression_s > (p_expression + semicolon, lambda x: x[0]),
@@ -146,7 +146,7 @@ class Parser(metaclass=Singleton):
             p_get > (
                 p_get + dot + identifier | p_get + open_p + p_arguments + close_p | identifier | _self | _super | p_index,
                 lambda x: GetNode(x[0], x[2]), lambda x: Call(x[0], x[2], x[1].line),
-                lambda x: Variable(x[0]), lambda x: SelfNode(), lambda x: SuperNode(), lambda x: x[0]),
+                lambda x: Variable(x[0]), lambda x: SelfNode(x[0]), lambda x: SuperNode(x[0]), lambda x: x[0]),
             p_index > (p_call + open_br + p_expression + close_br, lambda x: Index(x[0], x[2])),
 
             p_arguments > (p_expression + p_more_arguments | e, lambda x: [x[0], *x[1]], lambda x: []),
