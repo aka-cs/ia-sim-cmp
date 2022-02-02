@@ -7,7 +7,7 @@ from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
 from interpreter import TypeChecker
 from token_matchers import matches
-from errors import *
+from errors import UnexpectedToken, Error
 
 if __name__ == '__main__':
 
@@ -22,49 +22,17 @@ if __name__ == '__main__':
 
     parser = Parser(Path('binaries/grammar_parser').resolve())
 
+    error = Error(program)
+    ast = None
     try:
         ast = parser.parse(tokens)
     except UnexpectedToken as e:
-        print(f"Unexpected token found \"{tokens[e.index].text}\"", file=stderr)
-        print_code_error(program, tokens[e.index])
-        exit(1)
+        error(f"Unexpected token found \"{tokens[e.index].text}\"", token=tokens[e.index])
 
-    checker = TypeChecker()
+    checker = TypeChecker(error)
     transpiler = Transpiler()
 
-    try:
-        checker.start(ast)
-    except MissingMainError:
-        print(f"Program must define a main function", file=stderr)
-        exit(1)
-    except InvalidMain as e:
-        print(f"Main function must have void return type and no arguments", file=stderr)
-        print_code_line(program, e.main.line)
-        exit(1)
-    except InvalidTypeError as e:
-        print(e.message, file=stderr)
-        print_code_line(program, e.line)
-        exit(1)
-    except InvalidOperation as e:
-        print(e.message, file=stderr)
-        print_code_error(program, e.token)
-        exit(1)
-    except TypeNotDefined as e:
-        print(e.message, file=stderr)
-        print_code_error(program, e.token)
-        exit(1)
-    except InvalidMethodDeclaration as e:
-        print(e.message, file=stderr)
-        print_code_line(program, e.line)
-        exit(1)
-    except InvalidCall as e:
-        print(e.message, file=stderr)
-        print_code_line(program, e.line)
-        exit(1)
-    except NameNotInScope as e:
-        print(e.message, file=stderr)
-        print_code_error(program, e.token)
-        exit(1)
+    checker.start(ast)
 
     python_code = ["from builtin_code import *\n\n", *transpiler.transpile(ast)]
     with open('out/program.py', 'w') as f:

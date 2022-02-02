@@ -1,44 +1,43 @@
 from .functions import Function
-from errors import InvalidOperation, AttributeNotFound
 
 
 class Type(type):
 
     def __add__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __sub__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __mul__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __truediv__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __neg__(self):
-        raise InvalidOperation(f"Operator not supported for type {self}")
+        raise TypeError(f"Operator not supported for type {self}")
 
     def __eq__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __lt__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __gt__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __le__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __ge__(self, other):
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __getattr__(self, item):
-        raise AttributeNotFound(f"{self} has no attribute {item}")
+        raise AttributeError(f"{self} has no attribute {item}")
 
     def getattr(cls, name):
         return getattr(cls, name)
@@ -60,7 +59,7 @@ class TypeNumber(Type):
             return other
         if issubclass(other, self):
             return self
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __sub__(self, other):
         return self + other
@@ -77,7 +76,7 @@ class TypeNumber(Type):
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
             return Boolean
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
         return self == other
@@ -178,12 +177,12 @@ class TypeString(Type):
             return other
         if issubclass(other, self):
             return self
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
             return Boolean
-        raise InvalidOperation(f"Operator not supported for types {self} and {other}")
+        raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
         return self == other

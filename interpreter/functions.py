@@ -11,3 +11,6 @@ class Function:
         self.return_type = return_type
         self.line = line
 
+    def __str__(self):
+        return Function.__qualname__
+
