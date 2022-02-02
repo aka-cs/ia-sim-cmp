@@ -40,6 +40,9 @@ class Type(type):
     def __getattr__(self, item):
         raise AttributeNotFound(f"{self} has no attribute {item}")
 
+    def getattr(cls, name):
+        return getattr(cls, name)
+
     def __str__(self):
         return self.__qualname__
 
