@@ -73,8 +73,6 @@ class Tokenizer:
             
             if token_type == TokenType.COMMENT and \
                     (not tokens or tokens[-1].type not in [TokenType.COMMENT, TokenType.SEMICOLON, TokenType.OPEN_BRACES]):
-                line += 1
-                column = 0
                 continue
             
             if token_type == TokenType.LINEBREAK:
