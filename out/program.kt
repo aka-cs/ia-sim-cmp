@@ -2,7 +2,7 @@ Place::Position{
     fun init(name: String, x: Int, y: Int): void{
         // Clase posicion.
 
-        // Instanciamos la clase lugar (de la que heresa posicion), con el nombre.
+        // Instanciamos la clase lugar (de la que hereda posicion), con el nombre.
         super.init(name);
 
         // Instanciamos las coordenadas.
@@ -70,12 +70,10 @@ Vehicle::Taxi
         // Obtenemos la lista de objetos en la posicion actual.
         var map_objects: list<MapObject> = env.get_all_objects(self.position);
 
-        // Para este problema trivial, en cada posicion del entorno habra solo un objeto,
-        // por lo que la lista sera unaria.
-        if(len(map_objects) == 1){
+        // Recorremos la lista de objetos.
+        for(var map_object: map_objects){
             // Comprobamos el objeto en la posicion actual.
             // Solo nos interesa si es una persona (el taxi solo carga personas).
-            var map_object: MapObject = map_objects[0];
             switch map_object:
                 case Person{
                     // Si esta persona reservo este taxi la montamos, y retornamos
@@ -103,16 +101,17 @@ Vehicle::Taxi
             // Obtenemos la lista de objetos en la posicion actual.
             var map_objects: list<MapObject> = env.get_all_objects(place);
 
-            //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
-            // por lo que la lista sera unaria.
-            if(len(map_objects) == 1){
+            // Recorremos la lista de objetos.
+            for(var map_object: map_objects){
                 // Comprobamos el objeto en la posicion actual.
                 // Solo nos interesa si es una persona (el taxi solo carga personas).
-                var map_object: MapObject = map_objects[0];
                 switch map_object:
                     case Person{
-                            // Si es una persona, adicionamos su posicion a la lista.
-                            objective_positions.append(map_object.position);
+                        // Si es una persona, adicionamos su posicion a la lista.
+                        // Salimos del ciclo dado que, para este problema trivial, en cada  posicion
+                        // del entorno habra solo un objeto,  por lo que la lista sera unaria.
+                        objective_positions.append(map_object.position);
+                        break;
                     }
             }
         }
@@ -161,19 +160,17 @@ AStar::AStarT{
                     // Obtenemos la lista de objetos en la localizacion actual.
                     var map_objects: list<MapObject> = graph.get_all_objects(destiny);
 
-                    //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
-                    // por lo que la lista sera unaria.
-                    if(len(map_objects) == 1){
+                    // Recorremos la lista de objetos.
+                    for(var map_object: map_objects){
                         // Comprobamos el objeto en la posicion actual.
                         // Solo nos interesa si es una persona (el taxi solo carga personas).
-                        var map_object: MapObject = map_objects[0];
                         switch map_object:
                             case Person{
                                 // Si esta persona no ha reservado taxi, calculamos el valor de la heuristica
                                 // para esta persona, y retornamos este valor, dado que es la unica persona en
                                 // esta posicion.
                                 if(map_object.reserved_id == 0){
-                                    return measure(current,  map_object);
+                                    return self.measure(current,  map_object);
                                 }
                             }
                     }
@@ -184,33 +181,55 @@ AStar::AStarT{
         return infinity();
     }
 
-    fun actualize(current: Place, taxi: MapObject, taxis: list<MapObject>, graph: GraphEnvironment): void{
+    fun actualize_objective(current: Place, taxi: MapObject, taxis: list<MapObject>, graph: GraphEnvironment): void{
         // Metodo para actualizar la posicion objetivo del taxi en el entorno,
         // dado el taxi y la posicion afectada.
 
         // Obtenemos la lista de objetos en la posicion actual.
         var map_objects: list<MapObject> = graph.get_all_objects(current);
 
-        //Para este problema trivial, en cada posicion del entorno habra solo un objeto,
-        // por lo que la lista sera unaria.
-        if(len(map_objects) == 1){
-            // Comprobamos que el actor principal sea un taxi.
-            switch taxi:
-                case Taxi{
+        // Comprobamos que el actor principal sea un taxi.
+        switch taxi:
+            case Taxi{
+                // Recorremos la lista de objetos.
+                for(var map_object: map_objects){
                     // Comprobamos el objeto en la posicion actual.
                     // Solo nos interesa si es una persona (el taxi solo carga personas).
-                    var map_object: MapObject = map_objects[0];
                     switch map_object:
                         case Person{
                             // Si esta persona no ha reservado taxi la marcamos como reservada para este,
                             // puesto que es la unica en esta posicion, y esta es la posicion objetivo
                             // del taxi.
                             if(map_object.reserved_id == 0){
-                                map_object.reserved_id = taxis[0].identifier;
+                                map_object.reserved_id = taxi.identifier;
+                                break;
                             }
                         }
                 }
+            }
+    }
+
+    fun actualize_destiny(current: Place, taxi: MapObject, taxis: list<MapObject>, graph: GraphEnvironment): Place{
+        // Metodo para encontrar el nuevo destino del taxi despues de hallar la posicion objetivo,
+        // dado el taxi y la posicion afectada.
+
+        // Obtenemos la lista de objetos en la posicion actual.
+        var map_objects: list<MapObject> = graph.get_all_objects(current);
+
+        // Recorremos la lista de objetos.
+        for(var map_object: map_objects){
+            // Comprobamos el objeto en la posicion actual.
+            // Solo nos interesa si es una persona (el taxi solo carga personas).
+            switch map_object:
+                case Person{
+                    // Devolvemos el destino de la persona. No hay mas personas que analizar, dado que es
+                    // la unica persona en esta posicion.
+                    return map_object.destiny;
+                }
         }
+
+        // Si no hay personas en esta posicion, devolvemos null.
+        return null;
     }
 
     fun algorithm(current: Place, destinations: list<Place>, taxi: MapObject, taxis: list<MapObject>,

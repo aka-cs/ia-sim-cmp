@@ -54,6 +54,21 @@ class Event:
     # Momento en que debe ocurrir el evento.
     time: int
 
+    def __le__(self, other: Event):
+        return self.time <= other.time
+
+    def __lt__(self, other: Event):
+        return self.time < other.time
+
+    def __ge__(self, other: Event):
+        return self.time >= other.time
+
+    def __gt__(self, other: Event):
+        return self.time > other.time
+
+    def __eq__(self, other: Event):
+        return self.time == other.time
+
 
 @dataclass
 class SetEvent(Event):
@@ -168,29 +183,29 @@ class Vehicle(MapObject):
         # Si el evento afecta a este vehículo.
         if event.issuer_id == self.identifier:
             # Si queda recorrido, y el evento es un evento de movimiento.
-            if len(self.tour) > 0 and isinstance(event, MovementEvent):
-                # Desplazamos el vehículo una casilla.
-                self.position = self.tour.pop()
+            if self.tour and isinstance(event, MovementEvent):
+                # Verificamos si hay algo que cargar en la posición actual.
+                cargos = self.something_to_charge(env)
 
-                # Si el recorrido terminó, y hay carga.
-                if len(self.tour) == 0:
-                    if len(self.cargos) > 0:
-                        # Emitimos la cantidad correspondiente de eventos de descarga.
-                        return [DownloadEvent(self.identifier, cargo.identifier, event.time + 1)
-                                for cargo in self.cargos]
+                # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga,
+                # y un evento extra de movimiento.
+                if cargos:
+                    events: [Event] = [LoadEvent(self.identifier, event.time + i + 1, cargo.identifier)
+                                       for i, cargo in enumerate(cargos)]
+                    # noinspection PyTypeChecker
+                    events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
+                    return events
 
-                # En otro caso, varificamos si hay algo que cargar en la nueva posición.
+                # En otro caso, desplazamos el vehículo una casilla.
                 else:
-                    cargos = self.something_to_charge(env)
+                    self.position = self.tour.pop()
 
-                    # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga,
-                    # y un evento extra de movimiento.
-                    if len(cargos) > 0:
-                        events: [Event] = [LoadEvent(self.identifier, cargo.identifier, event.time + i + 1)
-                                           for i, cargo in enumerate(cargos)]
-                        # noinspection PyTypeChecker
-                        events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
-                        return events
+                    # Si el recorrido terminó, y hay carga.
+                    if not self.tour:
+                        if self.cargos:
+                            # Emitimos la cantidad correspondiente de eventos de descarga.
+                            return [DownloadEvent(self.identifier, cargo.identifier, event.time + 1)
+                                    for cargo in self.cargos]
 
             # Si es un evento de carga, llamamos al método de carga.
             if isinstance(event, LoadEvent):
@@ -201,15 +216,17 @@ class Vehicle(MapObject):
                 self.download(event.cargo_identifier, env)
 
         # Si el vehículo está inactivo, busca un nuevo objetivo.
-        if len(self.tour) == 0 and len(self.cargos) == 0:
+        if not self.tour and not self.cargos:
             # Revisa los objetivos en el mapa.
             places = self.get_objectives(env)
             # Calcula el nuevo recorrido.
             self.tour = self.next_objective(places, env)
+            self.tour.reverse()
+            # Retornamos un evento de movimiento.
+            return [MovementEvent(self.identifier, event.time + 1)] if self.tour else []
 
-        # Mientras haya camino que recorrer, lanzamos un evento de movimiento, en caso contrario
-        # no lanzamos nada.
-        return [MovementEvent(self.identifier, event.time + 1)] if len(self.tour) != 0 else []
+        # Si no se cumple ninguna condición no lanzamos nada.
+        return []
 
     def load(self, cargo_id: int, env: Environment) -> None:
         """
@@ -317,7 +334,9 @@ class GraphEnvironment(Environment):
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if element.position.place_name in self.objects:
+        if element.position.place_name in self.places:
+            if element.position.place_name not in self.objects:
+                self.objects[element.position.place_name] = {}
             self.objects[element.position.place_name][element.identifier] = element
 
     def remove_object(self, position: Place, identifier: int) -> None:
@@ -353,6 +372,18 @@ class AStar:
         """
         pass
 
+    @staticmethod
+    @abstractmethod
+    def actualize_destiny(objective: Place, principal_actor: MapObject, actors: [MapObject],
+                          graph: GraphEnvironment) -> Place:
+        """
+        Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
+        objetos de los cuales pudiera ser necesaria información para actualizar el objetivo devuelto
+        por AStar, dígase, la posición objetivo, un actor distinguido (potencialmente el actor al que
+        pertenece la IA), una lista de actores tener en cuenta y el entorno simulado.
+        """
+        pass
+
     def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
                   graph: GraphEnvironment) -> [Place]:
         """
@@ -375,6 +406,12 @@ class AStar:
         # El origen es su propio padre (es el inicio del camino).
         parents[origin.place_name] = origin.place_name
 
+        # Variable que determina si ya se encontró el objetivo.
+        objective_found: bool = False
+
+        # Variable para guardar el camino.
+        path: [Place] = []
+
         # Mientras en el conjunto de salida queden elementos.
         while len(open_lst) > 0:
             # Instanciamos el vertice actual con el valor por defecto None.
@@ -384,18 +421,14 @@ class AStar:
             for w in open_lst:
                 # Si aun no hemos instanciado v o bien el vértice w está más cerca
                 # del conjunto llegada (según la heurística) que v, actualizamos v con w.
-                if v is None or distances[w] + self.h(w, objectives, principal_actor, actors, graph) \
-                        < distances[v] + self.h(graph.get_place(v), objectives, principal_actor, actors, graph):
+                if v is None or distances[w] + (self.h(graph.get_place(w), objectives, principal_actor, actors, graph)
+                                                if not objective_found else 0) < \
+                                distances[v] + (self.h(graph.get_place(v), objectives, principal_actor, actors, graph)
+                                                if not objective_found else 0):
                     v = w
 
             # Si v esta directamente en el conjunto objetivo.
-            if v in objectives:
-                # Actualizamos la posición destino como objetivo del actor principal.
-                self.actualize_objective(graph.get_place(v), principal_actor, actors, graph)
-
-                # Variable para guardar el camino.
-                path: [Place] = []
-
+            if graph.get_place(v) in objectives:
                 # Mientras quede camino (mientras no encontremos un nodo que sea su propio padre, o sea,
                 # no encontremos el origen).
                 while parents[v] != v:
@@ -404,8 +437,42 @@ class AStar:
                     # Nos movemos al vertice padre.
                     v = parents[v]
 
-                # Devolvemos el camino.
-                return path
+                if objective_found:
+                    # Devolvemos el camino.
+                    return path
+
+                else:
+                    # Establecemos el nuevo origen.
+                    new_origin = path[-1] if path else origin
+
+                    # Actualizamos la posición destino como objetivo del actor principal.
+                    self.actualize_objective(new_origin, principal_actor, actors, graph)
+
+                    # Encontramos el objetivo.
+                    objective_found = True
+
+                    # Reiniciamos las variables, para hallar ahora el camino del objetivo a su destino.
+                    objectives = [self.actualize_destiny(new_origin, principal_actor, actors, graph)]
+
+                    # Conjunto salida.
+                    open_lst: {str} = {new_origin.place_name}
+
+                    # Conjunto llegada.
+                    closed_lst: {str} = set()
+
+                    # Lista de distancias.
+                    distances: {str: float} = dict()
+                    # La distancia del origen al origen es 0.
+                    distances[new_origin.place_name] = 0
+
+                    # Lista de padres (es una forma de representar el ast asociado al recorrido que
+                    # realiza AStar sobre el grafo).
+                    parents: {str, str} = dict()
+                    # El origen es su propio padre (es el inicio del camino).
+                    parents[new_origin.place_name] = new_origin.place_name
+
+                    # Regresamos al inicio del ciclo para computar el problema del nuevo inicio al nuevo objetivo.
+                    continue
 
             # En caso de que v no sea del conjunto objetivo, visitamos cada adyacente w de v.
             for w in graph.edges[v]:
@@ -418,7 +485,7 @@ class AStar:
                     # Asignamos a v como su padre.
                     parents[w] = v
                     # Actualizamos el array de distancias consecuentemente.
-                    distances[w] = distances[w] + weight
+                    distances[w] = distances[v] + weight
                 # Si está en alguno de los dos conjuntos.
                 else:
                     # Si pasar por v mejora el camino de costo minimo del origen a w,
@@ -448,9 +515,10 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
     """
     Simula el entorno, evento a evento.
     """
+    i = 0
     actual_event = None
     events = [event for event in initial_events]
-    while len(events) > 0 and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
+    while events and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
         # Actualizamos cada objeto del entorno.
@@ -458,4 +526,9 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
             for map_object in env.get_all_objects(place):
                 for event in env.get_object(place, map_object.identifier).update_state(env, actual_event):
                     heapq.heappush(events, event)
-        # vehicle.report_state()
+
+        i += 1
+        print(f"\nIteración: {i}")
+        for place in env.get_places():
+            for map_object in env.get_all_objects(place):
+                print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier}")
