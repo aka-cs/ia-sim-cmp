@@ -105,7 +105,7 @@ class DownloadEvent(Event):
 @dataclass
 class Environment:
     @abstractmethod
-    def get_places(self) -> [str]:
+    def places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """

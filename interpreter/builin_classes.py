@@ -44,8 +44,8 @@ class Vehicle(Agent):
 
             # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga.
             if cargos:
-                events.extend([LoadEvent(self.identifier, event.time + i + 1, cargo.identifier)
-                               for i, cargo in enumerate(cargos)])
+                events.extend([LoadEvent(self.identifier, event.time + i + 1, cargo_id)
+                               for i, cargo_id in enumerate(cargos) if env.get_object(self.position, cargo_id)])
 
         # Si es un evento de carga, llamamos al método de carga.
         if isinstance(event, LoadEvent):
@@ -70,6 +70,10 @@ class Vehicle(Agent):
                 self.tour.append(place)
                 # Añadimos los objetivos en esta posición a la lista de objetivos.
                 self.objectives.append(tour[place])
+
+                # Actualizamos el estado de cada objeto objetivo.
+                for objective_id in tour[place]:
+                    self.actualize_cargo(env.get_object(place, objective_id), env)
 
         # Si queda camino por recorrer.
         if self.tour:
@@ -105,51 +109,28 @@ class Vehicle(Agent):
         """
         Descarga el elemento con el identificador especificado en la posición actual.
         """
-        # Por cada destino del taxi.
-        for destiny in self.cargos:
-            # Obtenemos la lista de cargas del taxi asociadas a este destino.
-            cargos: [MapObject] = self.cargos[destiny]
+        # Obtenemos la lista de cargas del taxi asociadas a este destino.
+        cargos: [MapObject] = self.cargos[self.position]
 
-            # Por cada carga.
-            for i in range(len(cargos)):
-                # Si el id de la carga es el especificado, encontramos la carga deseada.
-                if cargos[i].identifier == cargo_id:
-                    # Actualizamos el estado de la carga.
-                    cargos[i].position = self.position
-                    self.actualize_cargo(cargos[i], env)
+        # Por cada carga.
+        for i in range(len(cargos)):
+            # Si el id de la carga es el especificado, encontramos la carga deseada.
+            if cargos[i].identifier == cargo_id:
+                # Actualizamos el estado de la carga.
+                cargos[i].position = self.position
+                self.actualize_cargo(cargos[i], env)
 
-                    # La colocamos en la posición actual del entorno.
-                    env.set_object(cargos[i])
+                # La colocamos en la posición actual del entorno.
+                env.set_object(cargos[i])
 
-                    # La bajamos del vehiculo.
-                    cargos[i], cargos[-1] = cargos[-1], cargos[i]
-                    cargos.pop()
+                # La bajamos del vehiculo.
+                cargos[i], cargos[-1] = cargos[-1], cargos[i]
+                cargos.pop()
 
-                    # Si no hay mas cargas para este destino, lo borramos del diccionario de cargas.
-                    if not cargos:
-                        del self.cargos[destiny]
-                    break
-
-    def something_to_charge(self, env: Environment) -> [MapObject]:
-        """
-        Indica si hay elementos de carga en la posición actual del vehículo dentro del ambiente
-        simulado. En caso afirmativo devuelve una lista con los elementos cargables.
-        """
-
-        # Objetos del entorno en la posicion actual.
-        map_objects: [MapObject] = env.get_all_objects(self.position)
-
-        # Objetos a cargar en esta posición.
-        cargos: [MapObject] = []
-
-        # Por cada objeto en la posición actual, varificamos si es uno de los objetivos del vehículo y,
-        # si lo es, lo añadimos en la lista de objetos a cargar.
-        for map_object in map_objects:
-            if map_object.identifier in self.objectives:
-                cargos.append(map_object)
-
-        # Devolvemos la lista.
-        return cargos
+                # Si no hay mas cargas para este destino, lo borramos del diccionario de cargas.
+                if not cargos:
+                    del self.cargos[self.position]
+                break
 
     @abstractmethod
     def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
@@ -183,20 +164,13 @@ class Vehicle(Agent):
 @dataclass
 class GraphEnvironment(Environment):
     edges: {str: {str: float}}
-    places: {str: Place}
     objects: {str: {int: MapObject}}
 
-    def get_place(self, name) -> Place:
+    def places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
-        return self.places.get(name, None)
-
-    def get_places(self) -> [Place]:
-        """
-        Devuelve las localizaciones del entorno simulado.
-        """
-        return [place for place in self.places.values()]
+        return [place for place in self.edges]
 
     def update_state(self, event: Event) -> [Event]:
         """
@@ -214,7 +188,7 @@ class GraphEnvironment(Environment):
         events = []
 
         # Actualizamos cada objeto del entorno.
-        for place in self.places:
+        for place in self.edges:
             for map_object in self.objects[place]:
                 if isinstance(map_object, Agent):
                     events.extend(map_object.update_state(event, self))
@@ -222,40 +196,40 @@ class GraphEnvironment(Environment):
         # Lanzamos los eventos obtenidos.
         return events
 
-    def get_all_objects(self, position: Place) -> [MapObject]:
+    def get_all_objects(self, position: str) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
-        return [element for element in self.objects.get(position.name, {}).values()]
+        return [element for element in self.objects.get(position, {}).values()]
 
-    def get_object(self, position: Place, identifier: int) -> MapObject:
+    def get_object(self, position: str, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
-        if position.name in self.objects and identifier in self.objects[position.name]:
-            return self.objects[position.name][identifier]
+        if position in self.objects and identifier in self.objects[position]:
+            return self.objects[position][identifier]
 
     def set_object(self, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if element.position.name in self.places:
-            if element.position.name not in self.objects:
-                self.objects[element.position.name] = {}
-            self.objects[element.position.name][element.identifier] = element
+        if element.position in self.places:
+            if element.position not in self.objects:
+                self.objects[element.position] = {}
+            self.objects[element.position][element.identifier] = element
 
-    def remove_object(self, position: Place, identifier: int) -> None:
+    def remove_object(self, position: str, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
-        if position.name in self.objects and identifier in self.objects[position.name]:
-            del self.objects[position.name][identifier]
+        if position in self.objects and identifier in self.objects[position]:
+            del self.objects[position][identifier]
 
 
 class AStar:
     @staticmethod
     @abstractmethod
-    def h(current: Place, destinations: [Place], principal_actor: MapObject, actors: [MapObject],
+    def h(current: str, destinations: [str], principal_actor: MapObject, actors: [MapObject],
           graph: GraphEnvironment) -> {int: float}:
         """
         Heuristica de AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
@@ -267,8 +241,8 @@ class AStar:
 
     @staticmethod
     @abstractmethod
-    def actualize_destiny(objective: Place, principal_actor: MapObject, actors: [MapObject],
-                          graph: GraphEnvironment) -> Place:
+    def actualize_destiny(objective: str, principal_actor: MapObject, actors: [MapObject],
+                          graph: GraphEnvironment) -> str:
         """
         Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
         objetos de los cuales pudiera ser necesaria información para ello, dígase, la posición
@@ -277,67 +251,79 @@ class AStar:
         """
         pass
 
-    def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
-                  graph: GraphEnvironment) -> {Place}:
+    def algorithm(self, origin: str, objective_positions: [str], principal_actor: MapObject, actors: [MapObject],
+                  graph: GraphEnvironment) -> {str}:
         """
         Algoritmo AStar.
         """
 
         # Conjunto salida.
-        open_lst: {str} = {origin.name}
-
+        open_lst: {str} = {origin}
         # Conjunto llegada.
         closed_lst: {str} = set()
 
         # Lista de distancias.
         distances: {str: float} = dict()
         # La distancia del origen al origen es 0.
-        distances[origin.name] = 0
+        distances[origin] = 0
 
         # Lista de padres (es una forma de representar el ast asociado al recorrido que
         # realiza AStar sobre el grafo).
         parents: {str, str} = dict()
         # El origen es su propio padre (es el inicio del camino).
-        parents[origin.name] = origin.name
+        parents[origin] = origin
 
-        # Variable que determina si ya se encontró el objetivo.
-        objective_found: bool = False
+        # Lista de objetivos encontrados.
+        objectives_found: [int] = []
 
         # Variable para guardar el primer fragmento del recorrido total.
-        objective_path: [Place] = []
+        objective_path: [str] = []
 
         # Variable para guardar el camino.
-        path: [Place] = []
+        path: [str] = []
+
+        # Variables para guardar los resultados del calculo de la heuristica.
+        h_v: {int: float} = dict()
+        h_w: {int: float} = dict()
 
         # Mientras en el conjunto de salida queden elementos.
-        while len(open_lst) > 0:
+        while open_lst:
             # Instanciamos el vertice actual con el valor por defecto None.
             v: Union[str, None] = None
 
             # Por cada vértice w del conjunto salida.
             for w in open_lst:
-                # Si aun no hemos instanciado v o bien el vértice w está más cerca
-                # del conjunto llegada (según la heurística) que v, actualizamos v con w.
-                if v is None or distances[w] + (self.h(graph.get_place(w), objectives, principal_actor, actors, graph)
-                                                if not objective_found else 0) < \
-                                distances[v] + (self.h(graph.get_place(v), objectives, principal_actor, actors, graph)
-                                                if not objective_found else 0):
+                if v is not None:
+                    if not objectives_found:
+                        # Calculamos el valor de heuristica para todos los objetivos desde v.
+                        h_v = self.h(v, objective_positions, principal_actor, actors, graph)
+                        # Calculamos el valor de heuristica para todos los objetivos desde w.
+                        h_w = self.h(w, objective_positions, principal_actor, actors, graph)
+
+                    # Si el vértice w está más cerca del conjunto llegada (según la heurística)
+                    # que v, actualizamos v con w.
+                    if distances[w] + min(h_w.values(), default=0) < distances[v] + min(h_v.values(), default=0):
+                        v = w
+                else:
                     v = w
 
             # Si v esta directamente en el conjunto objetivo.
-            if graph.get_place(v) in objectives:
+            if v in objective_positions:
                 # Mientras quede camino (mientras no encontremos un nodo que sea su propio padre, o sea,
                 # no encontremos el origen).
                 while parents[v] != v:
                     # Añadimos el vertice al camino.
-                    path.append(graph.get_place(v))
+                    path.append(v)
                     # Nos movemos al vertice padre.
                     v = parents[v]
+                path.append(v)
 
-                if objective_found:
+                if objectives_found:
                     # Unimos las mitades y devolvemos el camino.
-                    path.extend(objective_path)
-                    return path
+                    tour: {str: [int]} = {place: [] for place in path}
+                    tour.update({place: [] for place in objective_path})
+                    tour[path[0]] = objectives_found
+                    return tour
 
                 else:
                     # Establecemos el nuevo origen.
@@ -347,17 +333,18 @@ class AStar:
                     objective_path = path
                     path = []
 
-                    # Actualizamos la posición destino como objetivo del actor principal.
-                    self.actualize_objective(new_origin, principal_actor, actors, graph)
-
                     # Encontramos el objetivo.
-                    objective_found = True
+                    objectives_found = [identifier for identifier in h_w]
+
+                    # Reiniciamos las variables para guardar los resultados del calculo de la heuristica.
+                    h_v = dict()
+                    h_w = dict()
 
                     # Reiniciamos las variables, para hallar ahora el camino del objetivo a su destino.
-                    objectives = [self.actualize_destiny(new_origin, principal_actor, actors, graph)]
+                    objective_positions = [self.actualize_destiny(new_origin, principal_actor, actors, graph)]
 
                     # Conjunto salida.
-                    open_lst: {str} = {new_origin.name}
+                    open_lst: {str} = {new_origin}
 
                     # Conjunto llegada.
                     closed_lst: {str} = set()
@@ -365,13 +352,13 @@ class AStar:
                     # Lista de distancias.
                     distances: {str: float} = dict()
                     # La distancia del origen al origen es 0.
-                    distances[new_origin.name] = 0
+                    distances[new_origin] = 0
 
                     # Lista de padres (es una forma de representar el ast asociado al recorrido que
                     # realiza AStar sobre el grafo).
                     parents: {str, str} = dict()
                     # El origen es su propio padre (es el inicio del camino).
-                    parents[new_origin.name] = new_origin.name
+                    parents[new_origin] = new_origin
 
                     # Regresamos al inicio del ciclo para computar el problema del nuevo inicio al nuevo objetivo.
                     continue
