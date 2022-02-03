@@ -7,15 +7,6 @@ from typing import Union
 
 
 @dataclass
-class Place:
-    """
-    Clase lugar. Define las diferentes localizaciones del entorno simulado.
-    """
-    # Nombre para identificar la localización.
-    name: str
-
-
-@dataclass
 class MapObject:
     """
     Clase objeto de entorno. Engloba a los elementos posibles de un entorno simulado.
@@ -23,7 +14,7 @@ class MapObject:
     # Identificador para distinguir los elementos.
     identifier: int
     # Lugar del entorno simulado en el que se encuentra la carga.
-    position: Place
+    position: str
 
 
 @dataclass
@@ -82,7 +73,7 @@ class DeleteEvent(Event):
     en la posicion dada.
     """
     object_id: int
-    position: Place
+    position: str
 
 
 @dataclass
@@ -114,14 +105,7 @@ class DownloadEvent(Event):
 @dataclass
 class Environment:
     @abstractmethod
-    def get_place(self, name: str) -> Place:
-        """
-        Devuelve la localizacion del entorno simulado con el nombre especificado.
-        """
-        pass
-
-    @abstractmethod
-    def get_places(self) -> [Place]:
+    def get_places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
@@ -135,14 +119,14 @@ class Environment:
         pass
 
     @abstractmethod
-    def get_all_objects(self, position: Place) -> [MapObject]:
+    def get_all_objects(self, position: str) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
         pass
 
     @abstractmethod
-    def get_object(self, position: Place, identifier: int) -> MapObject:
+    def get_object(self, position: str, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
@@ -156,7 +140,7 @@ class Environment:
         pass
 
     @abstractmethod
-    def remove_object(self, position: Place, identifier: int) -> None:
+    def remove_object(self, position: str, identifier: int) -> None:
         """
         Remueve al elemento del id especificado de la posición dada en el entorno simulado.
         """

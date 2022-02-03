@@ -8,6 +8,8 @@ class Vehicle(Agent):
     """
     # Cargas que actualmente desplaza el vehículo.
     cargos: {str: [MapObject]}
+    # Objetivos del taxi.
+    objectives: [[int]]
     # Recorrido del vehículo.
     tour: [str]
 
@@ -16,17 +18,9 @@ class Vehicle(Agent):
         Actualiza el estado del vehículo, dígase, moverse a la proxima posición,
         cargar un objeto, entre otras acciones.
         """
-        # Verificamos si hay algo que cargar en la posición actual.
-        cargos = self.something_to_charge(env)
 
-        # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga,
-        # y un evento extra de movimiento.
-        if cargos:
-            events: [Event] = [LoadEvent(self.identifier, event.time + i + 1, cargo.identifier)
-                               for i, cargo in enumerate(cargos)]
-            # noinspection PyTypeChecker
-            events.append(MovementEvent(self.identifier, self.identifier, event.time + len(events) + 1))
-            return events
+        # Lista de eventos a devolver.
+        events: [Event] = []
 
         # Si queda recorrido, y el evento es un evento de movimiento.
         if self.tour and isinstance(event, MovementEvent):
@@ -38,15 +32,20 @@ class Vehicle(Agent):
             # Lo colocamos en la nueva casilla.
             env.set_object(self)
 
+            # Obtenemos los objetivos a cargar en la posición actual.
+            cargos: [int] = self.objectives.pop()
+
             # Si llegamos a una de las posiciones destino.
-            if self.position.name in self.cargos:
+            if self.position in self.cargos:
                 # Emitimos la cantidad correspondiente de eventos de descarga (una por cada objeto a descargar
                 # en esta posición).
-                events: [Event] = [DownloadEvent(self.identifier, event.time + 1, cargo.identifier)
-                                   for cargo in self.cargos[self.position.name]]
-                # noinspection PyTypeChecker
-                events.append(MovementEvent(self.identifier, self.identifier, event.time + len(events) + 1))
-                return events
+                events.extend([DownloadEvent(self.identifier, event.time + 1, cargo.identifier)
+                               for cargo in self.cargos[self.position]])
+
+            # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga.
+            if cargos:
+                events.extend([LoadEvent(self.identifier, event.time + i + 1, cargo.identifier)
+                               for i, cargo in enumerate(cargos)])
 
         # Si es un evento de carga, llamamos al método de carga.
         if isinstance(event, LoadEvent):
@@ -62,29 +61,45 @@ class Vehicle(Agent):
         if not self.tour and not self.cargos:
             # Revisa los objetivos en el mapa.
             places = self.get_objectives(env)
-            # Calcula el nuevo recorrido.
-            self.tour = self.build_tour(places, env)
 
-        # Retornamos un evento de movimiento si hay camino, en caso contrario no lanzamos evento.
-        return [MovementEvent(self.identifier, self.identifier, event.time + 1)] if self.tour else []
+            # Calcula el nuevo recorrido.
+            tour = self.build_tour(places, env)
+            # Por cada localizacion del recorrido.
+            for place in tour:
+                # Añadimos la localizacion al tour del vehículo.
+                self.tour.append(place)
+                # Añadimos los objetivos en esta posición a la lista de objetivos.
+                self.objectives.append(tour[place])
+
+        # Si queda camino por recorrer.
+        if self.tour:
+            # Añadimos un evento de movimiento.
+            events.append(MovementEvent(self.identifier, self.identifier, event.time + 1))
+
+        # Retornamos la lista de eventos.
+        return events
 
     def load(self, cargo_id: int, env: Environment) -> None:
         """
         Carga el elemento en la posición actual con el identificador especificado.
         """
+
         # Obtenemos el elemento.
         element = env.get_object(self.position, cargo_id)
-        # Lo removemos del entorno.
-        env.remove_object(self.position, cargo_id)
         # Obtenemos el destino del elemento.
         destiny = self.get_destiny(element, env)
 
-        # Lo añadimos al listado de cargas, asociado a su destino.
-        if destiny is not None and destiny.name not in self.cargos:
-            self.cargos[destiny.name] = []
+        # Si obtenemos un destino correcto.
+        if destiny is not None:
+            # Lo removemos del entorno.
+            env.remove_object(self.position, cargo_id)
 
-        # Lo guardamos en el diccionario de cargas, asociado a su destino.
-        self.cargos[destiny.name].append(element)
+            # Si el destino no está en el diccionario de cargas, lo añadimos.
+            if destiny not in self.cargos:
+                self.cargos[destiny] = []
+
+            # Lo guardamos en el diccionario de cargas, asociado a su destino.
+            self.cargos[destiny].append(element)
 
     def download(self, cargo_id: int, env: Environment) -> None:
         """
@@ -100,46 +115,65 @@ class Vehicle(Agent):
                 # Si el id de la carga es el especificado, encontramos la carga deseada.
                 if cargos[i].identifier == cargo_id:
                     # Actualizamos el estado de la carga.
+                    cargos[i].position = self.position
                     self.actualize_cargo(cargos[i], env)
+
                     # La colocamos en la posición actual del entorno.
                     env.set_object(cargos[i])
+
                     # La bajamos del vehiculo.
                     cargos[i], cargos[-1] = cargos[-1], cargos[i]
                     cargos.pop()
+
                     # Si no hay mas cargas para este destino, lo borramos del diccionario de cargas.
                     if not cargos:
                         del self.cargos[destiny]
                     break
 
-    def get_destiny(self, cargo: MapObject, env: Environment) -> Place:
-        """
-        Obtiene el destino del elemento especificado.
-        """
-        pass
-
-    def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
-        """
-        Actualiza el estado de una carga.
-        """
-        cargo.position = self.position
-
-    @abstractmethod
     def something_to_charge(self, env: Environment) -> [MapObject]:
         """
         Indica si hay elementos de carga en la posición actual del vehículo dentro del ambiente
         simulado. En caso afirmativo devuelve una lista con los elementos cargables.
         """
+
+        # Objetos del entorno en la posicion actual.
+        map_objects: [MapObject] = env.get_all_objects(self.position)
+
+        # Objetos a cargar en esta posición.
+        cargos: [MapObject] = []
+
+        # Por cada objeto en la posición actual, varificamos si es uno de los objetivos del vehículo y,
+        # si lo es, lo añadimos en la lista de objetos a cargar.
+        for map_object in map_objects:
+            if map_object.identifier in self.objectives:
+                cargos.append(map_object)
+
+        # Devolvemos la lista.
+        return cargos
+
+    @abstractmethod
+    def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
+        """
+        Actualiza el estado de una carga.
+        """
         pass
 
     @abstractmethod
-    def get_objectives(self, env: Environment) -> [Place]:
+    def get_destiny(self, cargo: MapObject, env: Environment) -> str:
+        """
+        Obtiene el destino del elemento especificado.
+        """
+        pass
+
+    @abstractmethod
+    def get_objectives(self, env: Environment) -> [str]:
         """
         Localiza en el mapa los posibles objetivos del taxi.
         """
         pass
 
     @abstractmethod
-    def build_tour(self, objectives: [Place], env: Environment) -> [Place]:
+    def build_tour(self, objectives: [str], env: Environment) -> [str]:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
@@ -222,24 +256,12 @@ class AStar:
     @staticmethod
     @abstractmethod
     def h(current: Place, destinations: [Place], principal_actor: MapObject, actors: [MapObject],
-          graph: GraphEnvironment) -> float:
+          graph: GraphEnvironment) -> {int: float}:
         """
         Heuristica de AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
-        para la heuristica, dígase, la posición actual, las posiciones destino, un agente distinguido
-        (potencialmente el actor al que pertenece la IA), una lista de actores tener en cuenta y el
-        entorno simulado.
-        """
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def actualize_objective(objective: Place, principal_actor: MapObject, actors: [MapObject],
-                            graph: GraphEnvironment) -> None:
-        """
-        Método de actualizacion adyacente, recibe todos los objetos de los cuales pudiera ser necesaria
-        información para actualizar el objetivo devuelto por AStar, dígase, la posición objetivo,
-        un actor distinguido (potencialmente el actor al que pertenece la IA), una lista de actores
-        tener en cuenta y el entorno simulado.
+        para calcular la heuristica, dígase, la posición actual, las posiciones destino, un agente
+        distinguido (potencialmente el actor al que pertenece la IA), una lista de actores tener en
+        cuenta y el entorno simulado.
         """
         pass
 
@@ -249,17 +271,18 @@ class AStar:
                           graph: GraphEnvironment) -> Place:
         """
         Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
-        objetos de los cuales pudiera ser necesaria información para actualizar el objetivo devuelto
-        por AStar, dígase, la posición objetivo, un actor distinguido (potencialmente el actor al que
-        pertenece la IA), una lista de actores tener en cuenta y el entorno simulado.
+        objetos de los cuales pudiera ser necesaria información para ello, dígase, la posición
+        objetivo, un actor distinguido (potencialmente el actor al que pertenece la IA), una lista
+        de actores tener en cuenta y el entorno simulado.
         """
         pass
 
     def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
-                  graph: GraphEnvironment) -> [Place]:
+                  graph: GraphEnvironment) -> {Place}:
         """
         Algoritmo AStar.
         """
+
         # Conjunto salida.
         open_lst: {str} = {origin.name}
 
