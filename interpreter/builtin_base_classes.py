@@ -91,7 +91,6 @@ class MovementEvent(Event):
     Evento de movimiento. Indica al objeto con el id correspondiente que debe moverse.
     """
     object_id: int
-    pass
 
 
 @dataclass

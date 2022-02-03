@@ -1,4 +1,4 @@
-from builtin_base_classes import *
+from .builtin_base_classes import *
 
 
 @dataclass
@@ -80,7 +80,7 @@ class Vehicle(Agent):
         destiny = self.get_destiny(element, env)
 
         # Lo añadimos al listado de cargas, asociado a su destino.
-        if destiny.name not in self.cargos:
+        if destiny is not None and destiny.name not in self.cargos:
             self.cargos[destiny.name] = []
 
         # Lo guardamos en el diccionario de cargas, asociado a su destino.
@@ -233,6 +233,18 @@ class AStar:
 
     @staticmethod
     @abstractmethod
+    def actualize_objective(objective: Place, principal_actor: MapObject, actors: [MapObject],
+                            graph: GraphEnvironment) -> None:
+        """
+        Método de actualizacion adyacente, recibe todos los objetos de los cuales pudiera ser necesaria
+        información para actualizar el objetivo devuelto por AStar, dígase, la posición objetivo,
+        un actor distinguido (potencialmente el actor al que pertenece la IA), una lista de actores
+        tener en cuenta y el entorno simulado.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
     def actualize_destiny(objective: Place, principal_actor: MapObject, actors: [MapObject],
                           graph: GraphEnvironment) -> Place:
         """
@@ -311,6 +323,9 @@ class AStar:
                     # Guardamos el camino construido y reiniciamos el camino.
                     objective_path = path
                     path = []
+
+                    # Actualizamos la posición destino como objetivo del actor principal.
+                    self.actualize_objective(new_origin, principal_actor, actors, graph)
 
                     # Encontramos el objetivo.
                     objective_found = True

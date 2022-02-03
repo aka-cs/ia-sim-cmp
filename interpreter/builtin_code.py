@@ -1,4 +1,4 @@
-from builtin_base_classes import *
+from .builtin_base_classes import *
 
 
 def infinity() -> float:
