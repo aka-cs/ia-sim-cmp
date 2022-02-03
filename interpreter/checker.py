@@ -25,8 +25,8 @@ class TypeChecker(metaclass=Singleton):
             self.scope.declare(cls.name, cls.get_constructor())
 
     def start(self, expressions: [Node]):
-        self.check_functions_in_scope(self.scope, expressions)
         self.check_classes_in_scope(expressions)
+        self.check_functions_in_scope(self.scope, expressions)
         if "main" not in self.scope.variables:
             self.error("Program must contain a main method")
         main: Function = self.scope.get("main")
