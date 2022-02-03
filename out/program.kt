@@ -1,9 +1,6 @@
-Place::Position{
+Position{
     fun init(name: String, x: Int, y: Int): void{
         // Clase posicion.
-
-        // Instanciamos la clase lugar (de la que hereda posicion), con el nombre.
-        super.init(name);
 
         // Instanciamos las coordenadas.
         attr x = x;

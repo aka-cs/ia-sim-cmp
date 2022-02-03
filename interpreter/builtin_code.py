@@ -1,11 +1,14 @@
-from .builtin_base_classes import *
+from __future__ import annotations
+from math import inf
+import heapq
+from .builtin_classes import *
 
 
 def infinity() -> float:
     return inf
 
 
-def simulate_environment(env: Environment, initial_events: [Event], total_time: int):
+def simulate_environment(env: Environment, initial_events: [Event], total_time: int) -> None:
     """
     Simula el entorno, evento a evento.
     """
@@ -18,7 +21,7 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
 
         i += 1
         print(f"\nIteración: {i}")
-        for place in env.get_places():
+        for place in env.places():
             for map_object in env.get_all_objects(place):
                 print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier} "
                       f"{[cargo.identifier for cargo in map_object.cargos] if isinstance(map_object, Vehicle) else ''}")
