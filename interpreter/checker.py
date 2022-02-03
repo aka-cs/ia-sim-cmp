@@ -90,6 +90,8 @@ class TypeChecker(metaclass=Singleton):
         values = [elem.check(self) for elem in expression.values]
         keys_types = self.common_type(keys)
         values_types = self.common_type(values)
+        if keys_types is None or values_types is None:
+            return TypeDict((keys_types, values_types))
         if issubclass(Object, keys_types):
             self.error("Dictionary keys are not of the same type", line=expression.start.line)
         if not issubclass(keys_types, Float) and not issubclass(keys_types, String):
