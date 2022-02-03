@@ -11,7 +11,6 @@ type_map = {type: Type, int: Int, float: Float, object: Object, bool: Boolean, s
 
 
 def get_type(_type: str | type):
-    print(f"{_type} => {type(_type)}")
     if isinstance(_type, str):
         _type = eval(_type)
     if isinstance(_type, list):
