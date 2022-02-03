@@ -1,6 +1,6 @@
 import inspect
-from . import builtin_code
 from .builtin_code import *
+from . import builtin_code
 from .functions import Function
 from ._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
 from .classes import Class

@@ -156,7 +156,7 @@ class Vehicle(Agent):
         pass
 
     @abstractmethod
-    def build_tour(self, objectives: [str], env: Environment) -> [str]:
+    def build_tour(self, objectives: [str], env: Environment) -> {str: [int]}:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
@@ -254,7 +254,7 @@ class AStar:
         pass
 
     def algorithm(self, origin: str, objective_positions: [str], principal_actor: MapObject, actors: [MapObject],
-                  graph: GraphEnvironment) -> {str}:
+                  graph: GraphEnvironment) -> {str: [int]}:
         """
         Algoritmo AStar.
         """
