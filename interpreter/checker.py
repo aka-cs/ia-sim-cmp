@@ -390,7 +390,7 @@ class TypeChecker(metaclass=Singleton):
 
     def get_class(self, name: Token):
         for t in self.types:
-            if str(t) == name:
+            if str(t) == name.text:
                 return t
         self.error(f"Class {name.text} not defined in scope", line=name.line)
 
