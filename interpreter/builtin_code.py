@@ -536,7 +536,8 @@ class AStar:
             open_lst.remove(v)
             closed_lst.add(v)
 
-        return []
+        # Devolvemos un diccionario vacio en caso de no hallar solución.
+        return {}
 
 
 def infinity() -> float:
