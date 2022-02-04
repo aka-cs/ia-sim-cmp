@@ -45,6 +45,7 @@ matches = [
     TokenMatcher(r'>', TokenType.GREATER),
     TokenMatcher(r'<', TokenType.LESS),
     TokenMatcher(r'==', TokenType.EQUAL_EQUAL),
+    TokenMatcher(r'!=', TokenType.EQUAL_DIFFERENT),
     TokenMatcher(r'=', TokenType.EQUAL),
     TokenMatcher(r'[a-zA-Z_]+(\w|_)*', TokenType.IDENTIFIER),
     TokenMatcher(r'\.', TokenType.DOT),
