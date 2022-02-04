@@ -336,7 +336,7 @@ class GraphEnvironment(Environment):
 
         # Actualizamos cada objeto del entorno.
         for place in self.edges:
-            for map_object in self.objects.get[place]:
+            for map_object in self.objects[place]:
                 if isinstance(map_object, Agent):
                     events.extend(map_object.update_state(event, self))
 
@@ -557,5 +557,5 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
         print(f"\nIteración: {i}")
         for place in env.places():
             for map_object in env.get_all_objects(place):
-                print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier} "
+                print(f"{map_object.position}: {type(map_object).__name__} {map_object.identifier} "
                       f"{[cargo.identifier for cargo in map_object.cargos] if isinstance(map_object, Vehicle) else ''}")
