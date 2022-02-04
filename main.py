@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from interpreter.transpiler import Transpiler
-from interpreter.builtin import get_code
+from transpiler.transpiler import Transpiler
+from builtin.builtin import get_code
 from regex.regex_ import RegParser
 from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
-from interpreter import TypeChecker
+from checker import TypeChecker
 from token_matchers import matches
 from errors import UnexpectedToken, Error
 
@@ -39,5 +39,5 @@ if __name__ == '__main__':
         f.write('\n'.join(python_code))
 
     with open('out/builtin_code.py', 'w') as f:
-        for line in get_code("interpreter/builtin_code.py"):
+        for line in get_code("src/builtin_code.py"):
             f.write(line)

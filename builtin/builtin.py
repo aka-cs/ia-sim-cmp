@@ -1,10 +1,10 @@
 import inspect
-from .builtin_code import *
-from . import builtin_code
-from .functions import Function
-from ._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
-from .classes import Class
-from .scope import Scope
+from src import builtin_code
+from src.builtin_code import *
+from builtin.functions import Function
+from builtin._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
+from builtin.classes import Class
+from builtin.scope import Scope
 
 
 type_map = {type: Type, int: Int, float: Float, object: Object, bool: Boolean, str: String, None: Null}

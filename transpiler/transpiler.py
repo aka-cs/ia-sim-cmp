@@ -1,18 +1,12 @@
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
 from tools import visitor
-from .scope import Scope
-from .builtin import builtin_functions
 
 
 class Transpiler:
 
     def __init__(self):
         self.lines: [str] = []
-        self.globals: Scope = Scope()
-        self.scope: Scope = self.globals
-        for fun in builtin_functions:
-            self.globals.declare(fun.name, fun)
 
     def transpile(self, expressions: [Node]):
         self.lines = []

@@ -1,8 +1,8 @@
-from typing import Optional
+from __future__ import annotations
 
 
 class Scope:
-    def __init__(self, father: Optional['Scope'] = None):
+    def __init__(self, father: Scope | None = None):
         self.variables: {str: object} = {}
         self.father = father
 

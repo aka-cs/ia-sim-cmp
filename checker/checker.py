@@ -1,11 +1,11 @@
 from tools import Singleton, visitor
-from .scope import Scope
+from builtin.scope import Scope
 from _parser.nodes import *
 from tokenizer.token_type import TokenType
-from ._types import Float, Int, String, Boolean, Null, TypeList, Object, TypeDict, Type
-from .functions import Function
-from .builtin import builtin_functions, builtin_classes
-from .classes import Class
+from builtin._types import Float, Int, String, Boolean, Null, TypeList, Object, TypeDict, Type
+from builtin.functions import Function
+from builtin.builtin import builtin_functions, builtin_classes
+from builtin.classes import Class
 from errors import Error
 
 

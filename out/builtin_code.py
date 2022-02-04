@@ -22,6 +22,7 @@ class Agent(MapObject):
     """
     Clase agente. Engloba a los elementos que pueden actuar en el entorno.
     """
+
     @abstractmethod
     def update_state(self, event: Event, env: Environment) -> [Event]:
         """
@@ -145,6 +146,7 @@ class Environment:
         Remueve al elemento del id especificado de la posición dada en el entorno simulado.
         """
         pass
+
 
 class Vehicle(Agent):
     """
@@ -536,7 +538,8 @@ class AStar:
             open_lst.remove(v)
             closed_lst.add(v)
 
-        return []
+        # Devolvemos un diccionario vacio en caso de no hallar solución.
+        return {}
 
 
 def infinity() -> float:
