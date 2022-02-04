@@ -550,15 +550,13 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
     """
     Simula el entorno, evento a evento.
     """
-    i = 0
     actual_event = None
     events = [event for event in initial_events]
     while events and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
 
-        i += 1
-        print(f"\nIteración: {i}")
+        print(f"\nTime: {actual_event.time}")
         for place in env.places():
             for map_object in env.get_all_objects(place):
                 print(f"{map_object.position}: {type(map_object).__name__} {map_object.identifier} "
