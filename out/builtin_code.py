@@ -22,6 +22,7 @@ class Agent(MapObject):
     """
     Clase agente. Engloba a los elementos que pueden actuar en el entorno.
     """
+
     @abstractmethod
     def update_state(self, event: Event, env: Environment) -> [Event]:
         """
@@ -81,7 +82,7 @@ class MovementEvent(Event):
     """
     Evento de movimiento. Indica al objeto con el id correspondiente que debe moverse.
     """
-    object_id: int
+    pass
 
 
 @dataclass
@@ -105,7 +106,7 @@ class DownloadEvent(Event):
 @dataclass
 class Environment:
     @abstractmethod
-    def places(self) -> [str]:
+    def get_places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
@@ -146,6 +147,7 @@ class Environment:
         """
         pass
 
+
 class Vehicle(Agent):
     """
     Clase vehículo. Define los diferentes transportes del entorno simulado.
@@ -160,49 +162,59 @@ class Vehicle(Agent):
         # Recorrido del vehículo.
         self.tour: [str] = []
 
-    def update_state(self, env: Environment, event: Event) -> [Event]:
+    def update_state(self, event: Event, env: Environment) -> [Event]:
         """
         Actualiza el estado del vehículo, dígase, moverse a la proxima posición,
         cargar un objeto, entre otras acciones.
         """
 
-        # Lista de eventos a devolver.
-        events: [Event] = []
+        # Si el evento afecta a este vehiculo.
+        if event.issuer_id == self.identifier:
+            # Si queda recorrido, y el evento es un evento de movimiento.
+            if self.tour and isinstance(event, MovementEvent):
+                # Movemos el vehiculo de posición.
+                # Lo borramos de la casilla anterior.
+                env.remove_object(self.position, self.identifier)
+                # Actualizamos la posición.
+                self.position = self.tour.pop()
+                # Lo colocamos en la nueva casilla.
+                env.set_object(self)
 
-        # Si queda recorrido, y el evento es un evento de movimiento.
-        if self.tour and isinstance(event, MovementEvent):
-            # Movemos el vehiculo de posición.
-            # Lo borramos de la casilla anterior.
-            env.remove_object(self.position, self.identifier)
-            # Actualizamos la posición.
-            self.position = self.tour.pop()
-            # Lo colocamos en la nueva casilla.
-            env.set_object(self)
+                # Obtenemos los objetivos a cargar en la posición actual.
+                cargos: [int] = self.objectives.pop()
 
-            # Obtenemos los objetivos a cargar en la posición actual.
-            cargos: [int] = self.objectives.pop()
+                # Lista de eventos a devolver.
+                events: [Event] = []
 
-            # Si llegamos a una de las posiciones destino.
-            if self.position in self.cargos:
-                # Emitimos la cantidad correspondiente de eventos de descarga (una por cada objeto a descargar
-                # en esta posición).
-                events.extend([DownloadEvent(self.identifier, event.time + 1, cargo.identifier)
-                               for cargo in self.cargos[self.position]])
+                # Si llegamos a una de las posiciones destino.
+                if self.position in self.cargos:
+                    # Emitimos la cantidad correspondiente de eventos de descarga (una por cada objeto a descargar
+                    # en esta posición).
+                    events.extend([DownloadEvent(event.time + 1, self.identifier, cargo.identifier)
+                                   for i, cargo in enumerate(self.cargos[self.position])])
 
-            # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga.
-            if cargos:
-                events.extend([LoadEvent(self.identifier, event.time + i + 1, cargo_id)
-                               for i, cargo_id in enumerate(cargos) if env.get_object(self.position, cargo_id)])
+                # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga.
+                if cargos:
+                    events.extend([LoadEvent(event.time + i + 1, self.identifier, cargo_id)
+                                   for i, cargo_id in enumerate(cargos) if env.get_object(self.position, cargo_id)])
 
-        # Si es un evento de carga, llamamos al método de carga.
-        if isinstance(event, LoadEvent):
-            self.load(event.cargo_identifier, env)
-            return []
+                # Si queda camino por recorrer.
+                if self.tour:
+                    # Añadimos un evento de movimiento.
+                    events.append(MovementEvent((events[-1].time if events else event.time) + 1, self.identifier))
 
-        # Si es un evento de descarga, llamamos al método de carga.
-        if isinstance(event, DownloadEvent):
-            self.download(event.cargo_identifier, env)
-            return []
+                # Lanzamos el listado de eventos.
+                return events
+
+            # Si es un evento de carga, llamamos al método de carga.
+            if isinstance(event, LoadEvent):
+                self.load(event.cargo_identifier, env)
+                return []
+
+            # Si es un evento de descarga, llamamos al método de carga.
+            if isinstance(event, DownloadEvent):
+                self.download(event.cargo_identifier, env)
+                return []
 
         # Si el vehículo está inactivo, busca un nuevo objetivo.
         if not self.tour and not self.cargos:
@@ -222,13 +234,11 @@ class Vehicle(Agent):
                 for objective_id in tour[place]:
                     self.actualize_cargo(env.get_object(place, objective_id), env)
 
-        # Si queda camino por recorrer.
-        if self.tour:
-            # Añadimos un evento de movimiento.
-            events.append(MovementEvent(self.identifier, self.identifier, event.time + 1))
+            # Si queda camino por recorrer, emitimos un evento de movimiento.
+            return [MovementEvent(event.time + 1, self.identifier)] if self.tour else []
 
-        # Retornamos la lista de eventos.
-        return events
+        # En caso que el evento no afecte a este vehículo, devolvemos una lista de eventos vacía.
+        return []
 
     def load(self, cargo_id: int, env: Environment) -> None:
         """
@@ -279,6 +289,19 @@ class Vehicle(Agent):
                     del self.cargos[self.position]
                 break
 
+    def get_cargos(self):
+        """
+        Devuelve las cargas del vehículo.
+        """
+        # Lista para guardar las cargas del vehículo.
+        cargos = []
+        # Por cada destino del vehículo.
+        for destiny in self.cargos:
+            # Añadimos las cargas asociadas a este destino.
+            cargos.extend(self.cargos[destiny])
+        # Devolvemos el listado de cargas.
+        return cargos
+
     @abstractmethod
     def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
         """
@@ -313,11 +336,24 @@ class GraphEnvironment(Environment):
     edges: {str: {str: float}}
     objects: {str: {int: MapObject}}
 
-    def places(self) -> [str]:
+    def get_places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
         return [place for place in self.edges]
+
+    def get_objects(self):
+        """
+        Devuelve las objetos del entorno.
+        """
+        # Lista para guardar las objetos del entorno.
+        map_objects = []
+        # Por cada destino del vehículo.
+        for place in self.objects:
+            # Añadimos las cargas asociadas a este destino.
+            map_objects.extend(self.get_all_objects(place))
+        # Devolvemos el listado de objetos.
+        return map_objects
 
     def update_state(self, event: Event) -> [Event]:
         """
@@ -335,10 +371,10 @@ class GraphEnvironment(Environment):
         events = []
 
         # Actualizamos cada objeto del entorno.
-        for place in self.edges:
-            for map_object in self.objects[place]:
-                if isinstance(map_object, Agent):
-                    events.extend(map_object.update_state(event, self))
+        for map_object in self.get_objects():
+            # Si es un agente, actualizamos su estado.
+            if isinstance(map_object, Agent):
+                events.extend(map_object.update_state(event, self))
 
         # Lanzamos los eventos obtenidos.
         return events
@@ -468,12 +504,12 @@ class AStar:
                     # Unimos las mitades y devolvemos el camino.
                     tour: {str: [int]} = {place: [] for place in path}
                     tour.update({place: [] for place in objective_path})
-                    tour[path[0]] = objectives_found
+                    tour[objective_path[0]] = objectives_found
                     return tour
 
                 else:
                     # Establecemos el nuevo origen.
-                    new_origin = path[-1] if path else origin
+                    new_origin = path[0] if path else origin
 
                     # Guardamos el camino construido y reiniciamos el camino.
                     objective_path = path
@@ -536,7 +572,8 @@ class AStar:
             open_lst.remove(v)
             closed_lst.add(v)
 
-        return []
+        # Devolvemos un diccionario vacio en caso de no hallar solución.
+        return {}
 
 
 def infinity() -> float:
@@ -547,16 +584,16 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
     """
     Simula el entorno, evento a evento.
     """
-    i = 0
     actual_event = None
     events = [event for event in initial_events]
     while events and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
 
-        i += 1
-        print(f"\nIteración: {i}")
-        for place in env.places():
+        # Imprimimos los resultados de cada evento en la simulación.
+        print(f"\nTime: {actual_event.time}")
+        for place in env.get_places():
             for map_object in env.get_all_objects(place):
                 print(f"{map_object.position}: {type(map_object).__name__} {map_object.identifier} "
-                      f"{[cargo.identifier for cargo in map_object.cargos] if isinstance(map_object, Vehicle) else ''}")
+                      f"{[cargo.identifier for cargo in map_object.get_cargos()] if isinstance(map_object, Vehicle) else ''}")
+
