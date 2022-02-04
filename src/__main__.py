@@ -1,11 +1,13 @@
+import os
+
 from pathlib import Path
 
-from interpreter.transpiler import Transpiler
-from interpreter.builtin import get_code
+from transpiler.transpiler import Transpiler
+from builtin.builtin import get_code
 from regex.regex_ import RegParser
 from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
-from interpreter import TypeChecker
+from checker import TypeChecker
 from token_matchers import matches
 from errors import UnexpectedToken, Error
 
@@ -15,7 +17,7 @@ if __name__ == '__main__':
 
     tokenizer = Tokenizer(matches, path='binaries/tokenizer')
 
-    with open('test/program.kt', 'r') as file:
+    with open('src/test/program.kt', 'r') as file:
         program = file.read()
 
     tokens = tokenizer.tokenize(program)
@@ -34,10 +36,12 @@ if __name__ == '__main__':
 
     checker.start(ast)
 
+    os.makedirs("out", exist_ok=True)
+
     python_code = ["from builtin_code import *\n\n", *transpiler.transpile(ast)]
     with open('out/program.py', 'w') as f:
         f.write('\n'.join(python_code))
 
     with open('out/builtin_code.py', 'w') as f:
-        for line in get_code("interpreter/builtin_code.py"):
+        for line in get_code("src/src/builtin_code.py"):
             f.write(line)
