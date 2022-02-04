@@ -556,6 +556,7 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
 
+        # Imprimimos los resultados de cada evento en la simulación.
         print(f"\nTime: {actual_event.time}")
         for place in env.places():
             for map_object in env.get_all_objects(place):
