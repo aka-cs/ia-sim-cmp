@@ -38,7 +38,7 @@ matches = [
     TokenMatcher('switch', TokenType.SWITCH),
     TokenMatcher('case', TokenType.CASE),
     TokenMatcher('default', TokenType.DEFAULT),
-    TokenMatcher(r'self', TokenType.SELF),
+    TokenMatcher(r'this', TokenType.SELF),
     TokenMatcher(r'super', TokenType.SUPER),
     TokenMatcher(r'>=', TokenType.GREATER_EQUAL),
     TokenMatcher(r'<=', TokenType.LESS_EQUAL),
