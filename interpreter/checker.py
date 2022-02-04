@@ -173,8 +173,8 @@ class TypeChecker(metaclass=Singleton):
             if isinstance(expression_type, Function):
                 self.error(
                     f"Variable {expression.name.text} can't be assigned {expression_type}", line=expression.name.line)
-            if issubclass(expression_type, Null):
-                self.error("Can't infer type of null", line=expression.name.line)
+            if not self.can_infer(expression_type):
+                self.error("Can't infer type from expression", line=expression.name.line)
         if self.scope.exists(expression.name.text):
             self.error(f"Variable {expression.name.text} already exists", line=expression.name.line)
         self.scope.declare(expression.name.text, expression_type)
@@ -312,8 +312,8 @@ class TypeChecker(metaclass=Singleton):
                     line=expression.name.line)
             expression_type = attr_type
         else:
-            if issubclass(expression_type, Null):
-                self.error("Can't infer type of null", line=expression.name.line)
+            if not self.can_infer(expression_type):
+                self.error("Can't infer type from expression", line=expression.name.line)
         self.current_class.scope.declare(expression.name.text, expression_type)
 
     @visitor(SwitchNode)
@@ -450,15 +450,28 @@ class TypeChecker(metaclass=Singleton):
         if isinstance(type1, TypeList) and isinstance(type2, TypeList):
             if type1.list_type is None:
                 return True
+            if type2.list_type is None:
+                return False
             return self.can_assign(type1.list_type, type2.list_type)
         if isinstance(type1, TypeDict) and isinstance(type2, TypeDict):
             if type1.key_type is None:
                 return True
+            if type2.key_type is None:
+                return False
             return self.can_assign(type1.key_type, type2.key_type) and \
                    self.can_assign(type1.value_type, type2.value_type)
         if issubclass(type1, Null) and isinstance(type2, Class):
             return True
         return issubclass(type1, type2)
+    
+    def can_infer(self, type: Type):
+        if type is None or issubclass(type, Null):
+            return False
+        if isinstance(type, TypeList):
+            return self.can_infer(type.list_type)
+        if isinstance(type, TypeDict):
+            return self.can_infer(type.key_type) and self.can_infer(type.value_type)
+        return True
 
     def common_type(self, types):
         if not types:
