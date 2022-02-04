@@ -532,6 +532,7 @@ class AStar:
                             closed_lst.remove(w)
                             open_lst.add(w)
 
+            # Removemos el vertice del conjunto de salida y lo añadimos al de llegada.
             open_lst.remove(v)
             closed_lst.add(v)
 
