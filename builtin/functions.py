@@ -1,8 +1,3 @@
-from dataclasses import dataclass
-from _parser.nodes import FunctionNode
-from interpreter.scope import Scope
-
-
 class Function:
 
     def __init__(self, name, param_types, return_type, line=0):

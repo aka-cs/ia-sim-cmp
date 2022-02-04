@@ -1,7 +1,7 @@
 import string
 from typing import List
 
-from ast_.ast_abstract import AtomicNode, UnaryNode, BinaryNode
+from __ast.ast_abstract import AtomicNode, UnaryNode, BinaryNode
 from automata.automata import Automata
 from regex.automata_creation import epsilon_automata, simple_automata, LetterAutomata, NumberAutomata, \
     NumberAndLetterAutomata, join_automatas

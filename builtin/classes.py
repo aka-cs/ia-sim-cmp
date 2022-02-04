@@ -1,12 +1,12 @@
-from ._types import Type, Object, Null
-from typing import Optional
+from __future__ import annotations
+from ._types import Type, Object
 from .scope import Scope
 from .functions import Function
 
 
 class Class(Type):
 
-    def __new__(mcs, name: str, super_class: Optional['Class'], scope: Scope):
+    def __new__(mcs, name: str, super_class: Class | None, scope: Scope):
         if super_class:
             scope.father = super_class.scope
             super_class = (super_class, )
