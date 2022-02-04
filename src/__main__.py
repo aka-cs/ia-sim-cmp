@@ -1,3 +1,5 @@
+import os
+
 from pathlib import Path
 
 from transpiler.transpiler import Transpiler
@@ -15,7 +17,7 @@ if __name__ == '__main__':
 
     tokenizer = Tokenizer(matches, path='binaries/tokenizer')
 
-    with open('test/program.kt', 'r') as file:
+    with open('src/test/program.kt', 'r') as file:
         program = file.read()
 
     tokens = tokenizer.tokenize(program)
@@ -34,10 +36,12 @@ if __name__ == '__main__':
 
     checker.start(ast)
 
+    os.makedirs("out", exist_ok=True)
+
     python_code = ["from builtin_code import *\n\n", *transpiler.transpile(ast)]
     with open('out/program.py', 'w') as f:
         f.write('\n'.join(python_code))
 
     with open('out/builtin_code.py', 'w') as f:
-        for line in get_code("src/builtin_code.py"):
+        for line in get_code("src/src/builtin_code.py"):
             f.write(line)
