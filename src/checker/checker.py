@@ -181,9 +181,9 @@ class TypeChecker(metaclass=Singleton):
 
     @visitor(VarType)
     def check(self, expression: VarType):
-        if expression.type.text == "list":
+        if expression.type.text == "List":
             return TypeList(expression.nested.check(self))
-        if expression.type.text == "dict":
+        if expression.type.text == "Dict":
             return TypeDict((expression.nested.check(self), expression.s_nested.check(self)))
         for t in self.types:
             if expression.type.text == str(t):
@@ -353,7 +353,7 @@ class TypeChecker(metaclass=Singleton):
                 params = []
                 for param in node.params:
                     params.append(param[1].check(self))
-                if node.return_type.type.text == "void" and not node.return_type.nested:
+                if node.return_type.type.text == "Void" and not node.return_type.nested:
                     return_type = Null
                 else:
                     return_type = node.return_type.check(self)
@@ -460,7 +460,7 @@ class TypeChecker(metaclass=Singleton):
                 return False
             return self.can_assign(type1.key_type, type2.key_type) and \
                    self.can_assign(type1.value_type, type2.value_type)
-        if issubclass(type1, Null) and isinstance(type2, Class):
+        if issubclass(type1, Null) and isinstance(type2, Type):
             return True
         return issubclass(type1, type2)
     

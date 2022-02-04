@@ -96,9 +96,13 @@ class Transpiler:
         if binary.operator.type == TokenType.MULTIPLY:
             return f'{left} * {right}'
         if binary.operator.type == TokenType.EQUAL_EQUAL:
-            return f'{left} == {right}'
+            if left == 'None':
+                left, right = right, left
+            return f'{left} {"is" if right == "None" else "=="} {right}'
         if binary.operator.type == TokenType.EQUAL_DIFFERENT:
-            return f'{left} != {right}'
+            if left == 'None':
+                left, right = right, left
+            return f'{left} {"is not" if right == "None" else "!="} {right}'
         if binary.operator.type == TokenType.LESS:
             return f'{left} < {right}'
         if binary.operator.type == TokenType.LESS_EQUAL:
