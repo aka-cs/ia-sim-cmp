@@ -90,6 +90,11 @@ class Transpiler:
         if binary.operator.type == TokenType.MINUS:
             return f'{left} - {right}'
         if binary.operator.type == TokenType.PLUS:
+            if self.value_is_str(left) or self.value_is_str(right):
+                if not self.value_is_str(left):
+                    left = f'str({left})'
+                if not self.value_is_str(right):
+                    right = f'str({right})'
             return f'{left} + {right}'
         if binary.operator.type == TokenType.DIVIDE:
             return f'{left} / {right}'
@@ -226,3 +231,7 @@ class Transpiler:
     def eval_block(self, statements, tabs: int = 0):
         for statement in statements:
             self.eval(statement, tabs=tabs)
+            
+    @staticmethod
+    def value_is_str(string: str):
+        return string.startswith('"') or string.startswith('str(')
