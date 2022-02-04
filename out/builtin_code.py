@@ -232,7 +232,7 @@ class Vehicle(Agent):
 
                 # Actualizamos el estado de cada objeto objetivo.
                 for objective_id in tour[place]:
-                    self.actualize_cargo(env.get_object(place, objective_id), env)
+                    self.update_cargo(env.get_object(place, objective_id), env)
 
             # Si queda camino por recorrer, emitimos un evento de movimiento.
             return [MovementEvent(event.time + 1, self.identifier)] if self.tour else []
@@ -275,7 +275,7 @@ class Vehicle(Agent):
             if cargos[i].identifier == cargo_id:
                 # Actualizamos el estado de la carga.
                 cargos[i].position = self.position
-                self.actualize_cargo(cargos[i], env)
+                self.update_cargo(cargos[i], env)
 
                 # La colocamos en la posición actual del entorno.
                 env.set_object(cargos[i])
@@ -303,7 +303,7 @@ class Vehicle(Agent):
         return cargos
 
     @abstractmethod
-    def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
+    def update_cargo(self, cargo: MapObject, env: Environment) -> None:
         """
         Actualiza el estado de una carga.
         """
@@ -434,7 +434,7 @@ class AStar:
 
     @staticmethod
     @abstractmethod
-    def actualize_destiny(objective: str, objective_ids: [int], actors: [MapObject], graph: GraphEnvironment) -> str:
+    def update_destiny(objective: str, objective_ids: [int], actors: [MapObject], graph: GraphEnvironment) -> str:
         """
         Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
         objetos de los cuales pudiera ser necesaria información para ello, dígase, la posición
@@ -519,7 +519,7 @@ class AStar:
                     objectives_found = self.get_objectives(new_origin, actors, graph)
 
                     # Reiniciamos las variables, para hallar ahora el camino del objetivo a su destino.
-                    objective_positions = [self.actualize_destiny(new_origin, objectives_found, actors, graph)]
+                    objective_positions = [self.update_destiny(new_origin, objectives_found, actors, graph)]
 
                     # Conjunto salida.
                     open_lst: {str} = {new_origin}
