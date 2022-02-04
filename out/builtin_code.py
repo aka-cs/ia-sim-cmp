@@ -1,18 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from math import inf, pow
+from dataclasses import dataclass
 from abc import abstractmethod
-import heapq
 from typing import Union
-
-
-@dataclass
-class Place:
-    """
-    Clase lugar. Define las diferentes localizaciones del entorno simulado.
-    """
-    # Nombre para identificar la localización.
-    place_name: str
+from math import inf
+import heapq
 
 
 @dataclass
@@ -23,24 +14,19 @@ class MapObject:
     # Identificador para distinguir los elementos.
     identifier: int
     # Lugar del entorno simulado en el que se encuentra la carga.
-    position: Place
-
-    @abstractmethod
-    def update_state(self, env: Environment, event: Event) -> [Event]:
-        """
-        Actualiza el estado del objeto según las caracteristicas de este.
-        """
-        pass
+    position: str
 
 
 @dataclass
-class Cargo(MapObject):
+class Agent(MapObject):
     """
-    Clase carga. Engloba los objeto cargables/transportables por un vehículo.
+    Clase agente. Engloba a los elementos que pueden actuar en el entorno.
     """
-
     @abstractmethod
-    def update_state(self, env: Environment, event: Event) -> [Event]:
+    def update_state(self, event: Event, env: Environment) -> [Event]:
+        """
+        Actualiza el estado del objeto según las caracteristicas de este.
+        """
         pass
 
 
@@ -49,11 +35,12 @@ class Event:
     """
     Clase evento. Engloba los diferentes sucesos de un ambiente simulado.
     """
-    # Identificador del emisor del evento.
-    issuer_id: int
     # Momento en que debe ocurrir el evento.
     time: int
+    # Identificador del emisor del evento.
+    issuer_id: int
 
+    # Comparador de eventos. Los eventos se comparan por el tiempo de emisión.
     def __le__(self, other: Event):
         return self.time <= other.time
 
@@ -73,8 +60,8 @@ class Event:
 @dataclass
 class SetEvent(Event):
     """
-    Evento de eliminacion. Indica al entorno simulado que debe eliminar el objeto del id correspondiente,
-    en la posicion dada.
+    Evento de adición. Indica al entorno simulado que debe añadir el objeto correspondiente,
+    en la posicion que este especifica.
     """
     object: MapObject
 
@@ -86,21 +73,22 @@ class DeleteEvent(Event):
     en la posicion dada.
     """
     object_id: int
-    position: Place
+    position: str
 
 
 @dataclass
 class MovementEvent(Event):
     """
-    Evento de movimiento. Indica al vehículo correspondiente que debe moverse.
+    Evento de movimiento. Indica al objeto con el id correspondiente que debe moverse.
     """
-    pass
+    object_id: int
 
 
 @dataclass
 class LoadEvent(Event):
     """
-    Evento de carga. Indica al vehículo correspondiente que debe cargar el objeto con el id especificado.
+    Evento de carga. Indica al vehículo correspondiente que debe cargar el objeto con el id especificado,
+    en la posición actual del vehiculo.
     """
     cargo_identifier: int
 
@@ -108,7 +96,8 @@ class LoadEvent(Event):
 @dataclass
 class DownloadEvent(Event):
     """
-    Evento de carga. Indica al vehículo correspondiente que debe cargar el objeto con el id especificado.
+    Evento de descarga. Indica al vehículo correspondiente que debe descargar el objeto con el id especificado,
+    en la posición actual del vehiculo.
     """
     cargo_identifier: int
 
@@ -116,14 +105,7 @@ class DownloadEvent(Event):
 @dataclass
 class Environment:
     @abstractmethod
-    def get_place(self, name: str) -> Place:
-        """
-        Devuelve las localizaciones del entorno simulado.
-        """
-        pass
-
-    @abstractmethod
-    def get_places(self) -> [Place]:
+    def places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
@@ -137,14 +119,14 @@ class Environment:
         pass
 
     @abstractmethod
-    def get_all_objects(self, position: Place) -> [MapObject]:
+    def get_all_objects(self, position: str) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
         pass
 
     @abstractmethod
-    def get_object(self, position: Place, identifier: int) -> MapObject:
+    def get_object(self, position: str, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
@@ -158,162 +140,184 @@ class Environment:
         pass
 
     @abstractmethod
-    def remove_object(self, position: Place, identifier: int) -> None:
+    def remove_object(self, position: str, identifier: int) -> None:
         """
-        Remueve al elemento dado en la posición especificada del entorno simulado.
+        Remueve al elemento del id especificado de la posición dada en el entorno simulado.
         """
         pass
 
-
-@dataclass
-class Vehicle(MapObject):
+class Vehicle(Agent):
     """
     Clase vehículo. Define los diferentes transportes del entorno simulado.
     """
-    # Carga que actualmente desplaza el vehículo.
-    cargos: [Cargo]
-    # Recorrido del vehículo.
-    tour: [str]
+
+    def __init__(self, identifier: int, position: str):
+        super().__init__(identifier, position)
+        # Cargas que actualmente desplaza el vehículo.
+        self.cargos: {str: [MapObject]} = {}
+        # Objetivos del taxi.
+        self.objectives: [[int]] = []
+        # Recorrido del vehículo.
+        self.tour: [str] = []
 
     def update_state(self, env: Environment, event: Event) -> [Event]:
         """
         Actualiza el estado del vehículo, dígase, moverse a la proxima posición,
         cargar un objeto, entre otras acciones.
         """
-        # Si el evento afecta a este vehículo.
-        if event.issuer_id == self.identifier:
-            # Si queda recorrido, y el evento es un evento de movimiento.
-            if self.tour and isinstance(event, MovementEvent):
-                # Verificamos si hay algo que cargar en la posición actual.
-                cargos = self.something_to_charge(env)
 
-                # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga,
-                # y un evento extra de movimiento.
-                if cargos:
-                    events: [Event] = [LoadEvent(self.identifier, event.time + i + 1, cargo.identifier)
-                                       for i, cargo in enumerate(cargos)]
-                    # noinspection PyTypeChecker
-                    events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
-                    return events
+        # Lista de eventos a devolver.
+        events: [Event] = []
 
-                # En otro caso, desplazamos el vehículo una casilla.
-                else:
-                    # Lo borramos de la casilla anterior.
-                    env.remove_object(self.position, self.identifier)
-                    # Actualizamos la posición.
-                    self.position = self.tour.pop()
-                    # Lo colocamos en la nueva casilla.
-                    env.set_object(self)
+        # Si queda recorrido, y el evento es un evento de movimiento.
+        if self.tour and isinstance(event, MovementEvent):
+            # Movemos el vehiculo de posición.
+            # Lo borramos de la casilla anterior.
+            env.remove_object(self.position, self.identifier)
+            # Actualizamos la posición.
+            self.position = self.tour.pop()
+            # Lo colocamos en la nueva casilla.
+            env.set_object(self)
 
-                    # Si el recorrido terminó, y hay carga.
-                    if not self.tour:
-                        if self.cargos:
-                            # Emitimos la cantidad correspondiente de eventos de descarga.
-                            events: [Event] = [DownloadEvent(self.identifier,  event.time + 1, cargo.identifier)
-                                               for cargo in self.cargos]
-                            # noinspection PyTypeChecker
-                            events.append(MovementEvent(self.identifier, event.time + len(events) + 1))
-                            return events
+            # Obtenemos los objetivos a cargar en la posición actual.
+            cargos: [int] = self.objectives.pop()
 
-            # Si es un evento de carga, llamamos al método de carga.
-            if isinstance(event, LoadEvent):
-                self.load(event.cargo_identifier, env)
-                return []
+            # Si llegamos a una de las posiciones destino.
+            if self.position in self.cargos:
+                # Emitimos la cantidad correspondiente de eventos de descarga (una por cada objeto a descargar
+                # en esta posición).
+                events.extend([DownloadEvent(self.identifier, event.time + 1, cargo.identifier)
+                               for cargo in self.cargos[self.position]])
 
-            # Si es un evento de descarga, llamamos al método de carga.
-            if isinstance(event, DownloadEvent):
-                self.download(event.cargo_identifier, env)
-                return []
+            # Si hay cargas, emitimos la cantidad correspondiente de eventos de carga.
+            if cargos:
+                events.extend([LoadEvent(self.identifier, event.time + i + 1, cargo_id)
+                               for i, cargo_id in enumerate(cargos) if env.get_object(self.position, cargo_id)])
+
+        # Si es un evento de carga, llamamos al método de carga.
+        if isinstance(event, LoadEvent):
+            self.load(event.cargo_identifier, env)
+            return []
+
+        # Si es un evento de descarga, llamamos al método de carga.
+        if isinstance(event, DownloadEvent):
+            self.download(event.cargo_identifier, env)
+            return []
 
         # Si el vehículo está inactivo, busca un nuevo objetivo.
         if not self.tour and not self.cargos:
             # Revisa los objetivos en el mapa.
             places = self.get_objectives(env)
-            # Calcula el nuevo recorrido.
-            self.tour = self.next_objective(places, env)
 
-        # Retornamos un evento de movimiento si hay camino, en caso contrario no lanzamos evento.
-        return [MovementEvent(self.identifier, event.time + 1)] if self.tour else []
+            # Calcula el nuevo recorrido.
+            tour = self.build_tour(places, env)
+            # Por cada localizacion del recorrido.
+            for place in tour:
+                # Añadimos la localizacion al tour del vehículo.
+                self.tour.append(place)
+                # Añadimos los objetivos en esta posición a la lista de objetivos.
+                self.objectives.append(tour[place])
+
+                # Actualizamos el estado de cada objeto objetivo.
+                for objective_id in tour[place]:
+                    self.actualize_cargo(env.get_object(place, objective_id), env)
+
+        # Si queda camino por recorrer.
+        if self.tour:
+            # Añadimos un evento de movimiento.
+            events.append(MovementEvent(self.identifier, self.identifier, event.time + 1))
+
+        # Retornamos la lista de eventos.
+        return events
 
     def load(self, cargo_id: int, env: Environment) -> None:
         """
         Carga el elemento en la posición actual con el identificador especificado.
         """
+
         # Obtenemos el elemento.
         element = env.get_object(self.position, cargo_id)
-        # Si es una carga, lo montamos.
-        if isinstance(element, Cargo):
-            env.remove_object(self.position, cargo_id)
-            self.cargos.append(element)
+        # Obtenemos el destino del elemento.
+        destiny = self.get_destiny(element, env)
 
-    def download(self, cargo_id, env: Environment) -> None:
+        # Si obtenemos un destino correcto.
+        if destiny:
+            # Lo removemos del entorno.
+            env.remove_object(self.position, cargo_id)
+
+            # Si el destino no está en el diccionario de cargas, lo añadimos.
+            if destiny not in self.cargos:
+                self.cargos[destiny] = []
+
+            # Lo guardamos en el diccionario de cargas, asociado a su destino.
+            self.cargos[destiny].append(element)
+
+    def download(self, cargo_id: int, env: Environment) -> None:
         """
         Descarga el elemento con el identificador especificado en la posición actual.
         """
-        # Obtenemos el elemento.
-        for i in range(len(self.cargos)):
-            # Obtenemos la carga.
-            cargo: Cargo = self.cargos[i]
+        # Obtenemos la lista de cargas del taxi asociadas a este destino.
+        cargos: [MapObject] = self.cargos[self.position]
+
+        # Por cada carga.
+        for i in range(len(cargos)):
             # Si el id de la carga es el especificado, encontramos la carga deseada.
-            if cargo.identifier == cargo_id:
-                self.actualize_cargo(cargo, env)
-                env.set_object(cargo)
-                self.cargos[i], self.cargos[-1] = self.cargos[-1], self.cargos[i]
-                self.cargos.pop()
+            if cargos[i].identifier == cargo_id:
+                # Actualizamos el estado de la carga.
+                cargos[i].position = self.position
+                self.actualize_cargo(cargos[i], env)
+
+                # La colocamos en la posición actual del entorno.
+                env.set_object(cargos[i])
+
+                # La bajamos del vehiculo.
+                cargos[i], cargos[-1] = cargos[-1], cargos[i]
+                cargos.pop()
+
+                # Si no hay mas cargas para este destino, lo borramos del diccionario de cargas.
+                if not cargos:
+                    del self.cargos[self.position]
                 break
 
-    def actualize_cargo(self, cargo: Cargo, env: Environment) -> None:
+    @abstractmethod
+    def actualize_cargo(self, cargo: MapObject, env: Environment) -> None:
         """
         Actualiza el estado de una carga.
         """
-        cargo.position = self.position
+        pass
 
     @abstractmethod
-    def something_to_charge(self, env: Environment) -> [Cargo]:
+    def get_destiny(self, cargo: MapObject, env: Environment) -> str:
         """
-        Indica si hay elementos de carga en la posición actual del vehículo dentro del ambiente
-        simulado. En caso afirmativo devuelve una lista con los elementos cargables.
+        Obtiene el destino del elemento especificado.
         """
         pass
 
     @abstractmethod
-    def get_objectives(self, env: Environment) -> [Place]:
+    def get_objectives(self, env: Environment) -> [str]:
         """
-        Localiza en el mapa los posibles recorridos del taxi.
+        Localiza en el mapa los posibles objetivos del taxi.
         """
         pass
 
     @abstractmethod
-    def next_objective(self, places: [Place], env: Environment) -> [Place]:
+    def build_tour(self, objectives: [str], env: Environment) -> {str: [int]}:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
         pass
 
-    def get_pos(self) -> Place:
-        """
-        Devuelve la posición actual del vehiculo.
-        """
-        return self.position
-
 
 @dataclass
 class GraphEnvironment(Environment):
     edges: {str: {str: float}}
-    places: {str: Place}
     objects: {str: {int: MapObject}}
 
-    def get_place(self, name) -> Place:
+    def places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
-        return self.places.get(name, None)
-
-    def get_places(self) -> [Place]:
-        """
-        Devuelve las localizaciones del entorno simulado.
-        """
-        return [place for place in self.places.values()]
+        return [place for place in self.edges]
 
     def update_state(self, event: Event) -> [Event]:
         """
@@ -328,109 +332,114 @@ class GraphEnvironment(Environment):
         elif isinstance(event, SetEvent):
             self.set_object(event.object)
 
-        # No lanzamos ningún otro evento.
-        return []
+        events = []
 
-    def get_all_objects(self, position: Place) -> [MapObject]:
+        # Actualizamos cada objeto del entorno.
+        for place in self.edges:
+            for map_object in self.objects.get[place]:
+                if isinstance(map_object, Agent):
+                    events.extend(map_object.update_state(event, self))
+
+        # Lanzamos los eventos obtenidos.
+        return events
+
+    def get_all_objects(self, position: str) -> [MapObject]:
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
-        return [element for element in self.objects.get(position.place_name, {}).values()]
+        return [element for element in self.objects.get(position, {}).values()]
 
-    def get_object(self, position: Place, identifier: int) -> MapObject:
+    def get_object(self, position: str, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
-        if position.place_name in self.objects and identifier in self.objects[position.place_name]:
-            return self.objects[position.place_name][identifier]
+        if position in self.objects and identifier in self.objects[position]:
+            return self.objects[position][identifier]
 
     def set_object(self, element: MapObject) -> None:
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if element.position.place_name in self.places:
-            if element.position.place_name not in self.objects:
-                self.objects[element.position.place_name] = {}
-            self.objects[element.position.place_name][element.identifier] = element
+        if element.position in self.edges:
+            if element.position not in self.objects:
+                self.objects[element.position] = {}
+            self.objects[element.position][element.identifier] = element
 
-    def remove_object(self, position: Place, identifier: int) -> None:
+    def remove_object(self, position: str, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
-        if position.place_name in self.objects and identifier in self.objects[position.place_name]:
-            del self.objects[position.place_name][identifier]
+        if position in self.objects and identifier in self.objects[position]:
+            del self.objects[position][identifier]
 
 
 class AStar:
     @staticmethod
     @abstractmethod
-    def h(current: Place, destinations: [Place], principal_actor: MapObject, actors: [MapObject],
-          graph: GraphEnvironment) -> float:
+    def h(current: str, destinations: [str], actors: [MapObject], graph: GraphEnvironment) -> float:
         """
         Heuristica de AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
-        para la heuristica, dígase, la posición actual, las posiciones destino, un agente distinguido
-        (potencialmente el actor al que pertenece la IA), una lista de actores tener en cuenta y el
-        entorno simulado.
+        para calcular la heuristica, dígase, la posición actual, las posiciones destino, un agente
+        distinguido (potencialmente el actor al que pertenece la IA), una lista de actores tener en
+        cuenta y el entorno simulado.
         """
         pass
 
     @staticmethod
     @abstractmethod
-    def actualize_objective(objective: Place, principal_actor: MapObject, actors: [MapObject],
-                            graph: GraphEnvironment) -> None:
-        """
-        Método de actualizacion adyacente, recibe todos los objetos de los cuales pudiera ser necesaria
-        información para actualizar el objetivo devuelto por AStar, dígase, la posición objetivo,
-        un actor distinguido (potencialmente el actor al que pertenece la IA), una lista de actores
-        tener en cuenta y el entorno simulado.
-        """
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def actualize_destiny(objective: Place, principal_actor: MapObject, actors: [MapObject],
-                          graph: GraphEnvironment) -> Place:
+    def get_objectives(objective: str, actors: [MapObject], graph: GraphEnvironment) -> [int]:
         """
         Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
-        objetos de los cuales pudiera ser necesaria información para actualizar el objetivo devuelto
-        por AStar, dígase, la posición objetivo, un actor distinguido (potencialmente el actor al que
-        pertenece la IA), una lista de actores tener en cuenta y el entorno simulado.
+        objetos de los cuales pudiera ser necesaria información para ello, dígase, la posición
+        objetivo, un actor distinguido (potencialmente el actor al que pertenece la IA), una lista
+        de actores tener en cuenta y el entorno simulado.
         """
         pass
 
-    def algorithm(self, origin: Place, objectives: [Place], principal_actor: MapObject, actors: [MapObject],
-                  graph: GraphEnvironment) -> [Place]:
+    @staticmethod
+    @abstractmethod
+    def actualize_destiny(objective: str, objective_ids: [int], actors: [MapObject], graph: GraphEnvironment) -> str:
+        """
+        Método de para obtener el destino final luego de alcanzar el objetivo, recibe todos los
+        objetos de los cuales pudiera ser necesaria información para ello, dígase, la posición
+        objetivo, el id del objetivo, un actor distinguido (potencialmente el actor al que pertenece
+        la IA), una lista de actores tener en cuenta y el entorno simulado.
+        """
+        pass
+
+    def algorithm(self, origin: str, objective_positions: [str], actors: [MapObject],
+                  graph: GraphEnvironment) -> {str: [int]}:
         """
         Algoritmo AStar.
         """
-        # Conjunto salida.
-        open_lst: {str} = {origin.place_name}
 
+        # Conjunto salida.
+        open_lst: {str} = {origin}
         # Conjunto llegada.
         closed_lst: {str} = set()
 
         # Lista de distancias.
         distances: {str: float} = dict()
         # La distancia del origen al origen es 0.
-        distances[origin.place_name] = 0
+        distances[origin] = 0
 
         # Lista de padres (es una forma de representar el ast asociado al recorrido que
         # realiza AStar sobre el grafo).
         parents: {str, str} = dict()
         # El origen es su propio padre (es el inicio del camino).
-        parents[origin.place_name] = origin.place_name
+        parents[origin] = origin
 
-        # Variable que determina si ya se encontró el objetivo.
-        objective_found: bool = False
+        # Objetivos encontrados.
+        objectives_found: [int] = []
 
         # Variable para guardar el primer fragmento del recorrido total.
-        objective_path: [Place] = []
+        objective_path: [str] = []
 
         # Variable para guardar el camino.
-        path: [Place] = []
+        path: [str] = []
 
         # Mientras en el conjunto de salida queden elementos.
-        while len(open_lst) > 0:
+        while open_lst:
             # Instanciamos el vertice actual con el valor por defecto None.
             v: Union[str, None] = None
 
@@ -438,26 +447,29 @@ class AStar:
             for w in open_lst:
                 # Si aun no hemos instanciado v o bien el vértice w está más cerca
                 # del conjunto llegada (según la heurística) que v, actualizamos v con w.
-                if v is None or distances[w] + (self.h(graph.get_place(w), objectives, principal_actor, actors, graph)
-                                                if not objective_found else 0) < \
-                                distances[v] + (self.h(graph.get_place(v), objectives, principal_actor, actors, graph)
-                                                if not objective_found else 0):
+                if v is None or distances[w] + (self.h(w, objective_positions, actors, graph)
+                                                if not objectives_found else 0) < \
+                                distances[v] + (self.h(v, objective_positions, actors, graph)
+                                                if not objectives_found else 0):
                     v = w
 
             # Si v esta directamente en el conjunto objetivo.
-            if graph.get_place(v) in objectives:
+            if v in objective_positions:
                 # Mientras quede camino (mientras no encontremos un nodo que sea su propio padre, o sea,
                 # no encontremos el origen).
                 while parents[v] != v:
                     # Añadimos el vertice al camino.
-                    path.append(graph.get_place(v))
+                    path.append(v)
                     # Nos movemos al vertice padre.
                     v = parents[v]
+                path.append(v)
 
-                if objective_found:
+                if objectives_found:
                     # Unimos las mitades y devolvemos el camino.
-                    path.extend(objective_path)
-                    return path
+                    tour: {str: [int]} = {place: [] for place in path}
+                    tour.update({place: [] for place in objective_path})
+                    tour[path[0]] = objectives_found
+                    return tour
 
                 else:
                     # Establecemos el nuevo origen.
@@ -467,17 +479,14 @@ class AStar:
                     objective_path = path
                     path = []
 
-                    # Actualizamos la posición destino como objetivo del actor principal.
-                    self.actualize_objective(new_origin, principal_actor, actors, graph)
-
                     # Encontramos el objetivo.
-                    objective_found = True
+                    objectives_found = self.get_objectives(new_origin, actors, graph)
 
                     # Reiniciamos las variables, para hallar ahora el camino del objetivo a su destino.
-                    objectives = [self.actualize_destiny(new_origin, principal_actor, actors, graph)]
+                    objective_positions = [self.actualize_destiny(new_origin, objectives_found, actors, graph)]
 
                     # Conjunto salida.
-                    open_lst: {str} = {new_origin.place_name}
+                    open_lst: {str} = {new_origin}
 
                     # Conjunto llegada.
                     closed_lst: {str} = set()
@@ -485,13 +494,13 @@ class AStar:
                     # Lista de distancias.
                     distances: {str: float} = dict()
                     # La distancia del origen al origen es 0.
-                    distances[new_origin.place_name] = 0
+                    distances[new_origin] = 0
 
                     # Lista de padres (es una forma de representar el ast asociado al recorrido que
                     # realiza AStar sobre el grafo).
                     parents: {str, str} = dict()
                     # El origen es su propio padre (es el inicio del camino).
-                    parents[new_origin.place_name] = new_origin.place_name
+                    parents[new_origin] = new_origin
 
                     # Regresamos al inicio del ciclo para computar el problema del nuevo inicio al nuevo objetivo.
                     continue
@@ -533,7 +542,7 @@ def infinity() -> float:
     return inf
 
 
-def simulate_environment(env: Environment, initial_events: [Event], total_time: int):
+def simulate_environment(env: Environment, initial_events: [Event], total_time: int) -> None:
     """
     Simula el entorno, evento a evento.
     """
@@ -543,15 +552,10 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
     while events and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)
-        # Actualizamos cada objeto del entorno.
-        for place in env.get_places():
-            for map_object in env.get_all_objects(place):
-                for event in env.get_object(place, map_object.identifier).update_state(env, actual_event):
-                    heapq.heappush(events, event)
 
         i += 1
         print(f"\nIteración: {i}")
-        for place in env.get_places():
+        for place in env.places():
             for map_object in env.get_all_objects(place):
                 print(f"{map_object.position.place_name}: {type(map_object).__name__} {map_object.identifier} "
                       f"{[cargo.identifier for cargo in map_object.cargos] if isinstance(map_object, Vehicle) else ''}")
