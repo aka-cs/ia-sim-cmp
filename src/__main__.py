@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from pathlib import Path
 
@@ -36,6 +37,8 @@ if __name__ == '__main__':
 
     checker.start(ast)
 
+    if os.path.exists("out"):
+        shutil.rmtree("out")
     os.makedirs("out", exist_ok=True)
     code = get_code()
 
