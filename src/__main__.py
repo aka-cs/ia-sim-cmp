@@ -43,7 +43,7 @@ if __name__ == '__main__':
     code = get_code()
 
     python_code = [f"from builtin import *", '\n', *transpiler.transpile(ast)]
-    with open('out/program.py', 'w') as f:
+    with open('out/__main__.py', 'w') as f:
         f.write('\n'.join(python_code))
 
     os.makedirs("out/builtin", exist_ok=True)
