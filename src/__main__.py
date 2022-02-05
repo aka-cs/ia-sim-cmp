@@ -39,11 +39,12 @@ if __name__ == '__main__':
     os.makedirs("out", exist_ok=True)
     code = get_code()
 
-    python_code = [*[f"from {file.stem} import *" for file in code], '\n', *transpiler.transpile(ast)]
+    python_code = [f"from builtin import *", '\n', *transpiler.transpile(ast)]
     with open('out/program.py', 'w') as f:
         f.write('\n'.join(python_code))
 
+    os.makedirs("out/builtin", exist_ok=True)
     for file in code:
-        with open(f'out/{file.name}', 'w') as f:
+        with open(f'out/builtin/{file.name}', 'w') as f:
             for line in code[file]:
                 f.write(line)

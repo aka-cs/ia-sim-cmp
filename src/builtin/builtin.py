@@ -76,8 +76,6 @@ def get_code() -> [str]:
     files = files_path.glob('*.py')
     result = {}
     for file in files:
-        if file.name == "__init__.py":
-            continue
         result[file] = open(file).readlines()
     return result
 
