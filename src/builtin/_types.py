@@ -16,6 +16,9 @@ class Type(type):
 
     def __truediv__(self, other):
         raise TypeError(f"Operator not supported for types {self} and {other}")
+    
+    def __mod__(self, other):
+        return self / other
 
     def __neg__(self):
         raise TypeError(f"Operator not supported for type {self}")

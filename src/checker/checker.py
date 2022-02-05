@@ -148,6 +148,8 @@ class TypeChecker(metaclass=Singleton):
                 return left > right
             if expression.operator.type == TokenType.GREATER_EQUAL:
                 return left >= right
+            if expression.operator.type == TokenType.MODULO:
+                return left % right
         except TypeError as e:
             self.error(e.args[0], token=expression.operator)
         return None

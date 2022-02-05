@@ -44,6 +44,7 @@ matches = [
     TokenMatcher(r'<=', TokenType.LESS_EQUAL),
     TokenMatcher(r'>', TokenType.GREATER),
     TokenMatcher(r'<', TokenType.LESS),
+    TokenMatcher(r'%', TokenType.MODULO),
     TokenMatcher(r'==', TokenType.EQUAL_EQUAL),
     TokenMatcher(r'!=', TokenType.EQUAL_DIFFERENT),
     TokenMatcher(r'=', TokenType.EQUAL),

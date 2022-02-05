@@ -10,7 +10,7 @@ class Parser(metaclass=Singleton):
 
     def __init__(self, path=None):
         symbol = Terminal("symbol")
-        operators = equals, plus, minus, mul, div, exclamation = CreateTerminals("= + - * / !".split())
+        operators = equals, plus, minus, mul, div, mod, exclamation = CreateTerminals("= + - * / % !".split())
         comparison = equals_equals, different, greater, greaterequal, less, lessequal = CreateTerminals(
             "== != > >= < <=".split())
         logic = and_operator, or_operator = CreateTerminals("and or".split())
@@ -167,7 +167,7 @@ class Parser(metaclass=Singleton):
             p_comparison_op > (greater | greaterequal | less | lessequal,
                                lambda x: x[0], lambda x: x[0], lambda x: x[0], lambda x: x[0]),
             p_term_op > (plus | minus, lambda x: x[0], lambda x: x[0]),
-            p_factor_op > (mul | div, lambda x: x[0], lambda x: x[0]),
+            p_factor_op > (mul | div | mod, lambda x: x[0], lambda x: x[0], lambda x:x[0]),
             p_unary_op > (exclamation | minus, lambda x: x[0], lambda x: x[0])
         ]
 
@@ -214,6 +214,7 @@ class Parser(metaclass=Singleton):
             TokenType.MINUS: minus,
             TokenType.MULTIPLY: mul,
             TokenType.DIVIDE: div,
+            TokenType.MODULO: mod,
             TokenType.EXCLAMATION: exclamation,
             TokenType.COMMA: comma,
             TokenType.DOT: dot,

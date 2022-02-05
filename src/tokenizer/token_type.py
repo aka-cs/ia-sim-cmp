@@ -21,6 +21,7 @@ class TokenType(Enum):
     MULTIPLY = auto()
     DIVIDE = auto()
     EXCLAMATION = auto()
+    MODULO = auto()
 
     # one or two characters
     GREATER = auto()
