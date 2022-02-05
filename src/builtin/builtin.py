@@ -1,6 +1,7 @@
 import inspect
 import src
 import glob
+from pathlib import Path
 
 from src import *
 from builtin.functions import Function
@@ -71,13 +72,13 @@ def get_functions(module=src) -> [Function]:
 
 
 def get_code() -> [str]:
-    files = glob.glob('src/src/*.py', root_dir='.')
+    files_path = Path('src/src/')
+    files = files_path.glob('*.py')
     result = {}
     for file in files:
-        name = file.split("\\")[-1][:-3]
-        if name == "__init__":
+        if file.name == "__init__.py":
             continue
-        result[name] = open(file).readlines()
+        result[file] = open(file).readlines()
     return result
 
 
