@@ -4,6 +4,8 @@ from .functions import Function
 class Type(type):
 
     def __add__(self, other):
+        if issubclass(self, String) or issubclass(other, String):
+            return String
         raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __sub__(self, other):
