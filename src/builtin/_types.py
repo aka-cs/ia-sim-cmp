@@ -4,6 +4,8 @@ from .functions import Function
 class Type(type):
 
     def __add__(self, other):
+        if issubclass(self, String) or issubclass(other, String):
+            return String
         raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __sub__(self, other):
@@ -19,10 +21,12 @@ class Type(type):
         raise TypeError(f"Operator not supported for type {self}")
 
     def __eq__(self, other):
+        if issubclass(other, Null):
+            return other() == self
         raise TypeError(f"Operator not supported for types {self} and {other}")
 
     def __ne__(self, other):
-        raise TypeError(f"Operator not supported for types {self} and {other}")
+        return self == other
 
     def __lt__(self, other):
         raise TypeError(f"Operator not supported for types {self} and {other}")
@@ -59,7 +63,7 @@ class TypeNumber(Type):
             return other
         if issubclass(other, self):
             return self
-        raise TypeError(f"Operator not supported for types {self} and {other}")
+        return super(TypeNumber, self).__add__(other)
 
     def __sub__(self, other):
         return self + other
@@ -76,7 +80,7 @@ class TypeNumber(Type):
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
             return Boolean
-        raise TypeError(f"Operator not supported for types {self} and {other}")
+        return super(TypeNumber, self).__eq__(other)
 
     def __ne__(self, other):
         return self == other
@@ -177,12 +181,12 @@ class TypeString(Type):
             return other
         if issubclass(other, self):
             return self
-        raise TypeError(f"Operator not supported for types {self} and {other}")
+        return super(TypeString, self).__add__(other)
 
     def __eq__(self, other):
         if issubclass(self, other) or issubclass(other, self):
             return Boolean
-        raise TypeError(f"Operator not supported for types {self} and {other}")
+        return super(TypeString, self).__eq__(other)
 
     def __ne__(self, other):
         return self == other
@@ -237,6 +241,11 @@ class TypeList(Type):
         if not issubclass(item, Int):
             raise TypeError("Index must be an integer")
         return cls.list_type
+    
+    def __mul__(cls, other):
+        if issubclass(other, Int):
+            return cls
+        return super(TypeList, cls).__mul__(other)
 
     def __str__(self):
         return f"list<{self.list_type}>"
@@ -253,6 +262,11 @@ class List(Object):
 
     def __setitem__(self, key, value):
         self.value[key] = value
+
+    def __mul__(self, other):
+        if issubclass(other, Int):
+            return List(self.value * other.value)
+        return super(List, self).__mul__(other)
 
     def __str__(self):
         return str(self.value)
@@ -296,3 +310,6 @@ class Null(metaclass=Type):
 
     def __str__(self):
         return str(self.__class__).lower()
+    
+    def __eq__(self, other):
+        return Boolean

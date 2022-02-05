@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ._types import Type, Object
+from ._types import Type, Object, Boolean
 from .scope import Scope
 from .functions import Function
 
@@ -25,6 +25,9 @@ class Class(Type):
 
     def __str__(self):
         return self.__qualname__
+    
+    def __eq__(self, other):
+        return Boolean if isinstance(other, Class) else other.__eq__(other, self)
 
     def getattr(self, item):
         try:
