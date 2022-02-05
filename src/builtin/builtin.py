@@ -1,6 +1,8 @@
 import inspect
-from src import builtin_code
-from src.builtin_code import *
+import src
+import glob
+
+from src import *
 from builtin.functions import Function
 from builtin._types import Object, Null, Int, Float, Boolean, String, TypeList, TypeDict, Type, List
 from builtin.classes import Class
@@ -29,7 +31,7 @@ def get_classes_in_module(module) -> [type]:
     return result
 
 
-def get_classes(module=builtin_code) -> [Class]:
+def get_classes(module=src) -> [Class]:
     classes = get_classes_in_module(module)
     created = set()
     result = []
@@ -60,21 +62,23 @@ def get_builtin_function(function) -> Function:
     return Function(function[0], params, get_type(_annotations.get('return', None)))
 
 
-def get_functions(module=builtin_code) -> [Function]:
+def get_functions(module=src) -> [Function]:
     functions = inspect.getmembers(module, inspect.isfunction)
     result = []
     for function in functions:
-        if function[1].__module__ != module.__name__:
-            continue
         result.append(get_builtin_function(function))
     return result
 
 
-def get_code(file: str) -> [str]:
-    file = open(file)
-    lines = file.readlines()
-    file.close()
-    return lines
+def get_code() -> [str]:
+    files = glob.glob('src/src/*.py', root_dir='.')
+    result = {}
+    for file in files:
+        name = file.split("\\")[-1][:-3]
+        if name == "__init__":
+            continue
+        result[name] = open(file).readlines()
+    return result
 
 
 builtin_classes: [Class] = [*get_classes()]
