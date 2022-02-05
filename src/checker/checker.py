@@ -324,7 +324,7 @@ class TypeChecker(metaclass=Singleton):
             c_type = self.get_class(_case)
             if not isinstance(c_type, Class):
                 self.error(f"Can't cast to type {c_type}", line=_case.line)
-            if not self.can_assign(var_type, c_type) and not self.can_assign(c_type, var_type):
+            if not self.can_assign(c_type, var_type):
                 self.error(f"Can't cast {var_type} to {c_type}", line=_case.line)
             scope = Scope(self.scope)
             scope.declare(var, c_type)
