@@ -1,4 +1,5 @@
-from base_classes import *
+from __future__ import annotations
+from .base_classes import *
 
 
 @dataclass
