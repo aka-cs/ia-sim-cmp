@@ -9,7 +9,7 @@ from regex.regex_ import RegParser
 from tokenizer.tokenizer import Tokenizer
 from _parser import Parser
 from checker import TypeChecker
-from token_matchers import matches
+from tokenizer.token_matchers import matches
 from errors import UnexpectedToken, Error
 
 if __name__ == '__main__':
