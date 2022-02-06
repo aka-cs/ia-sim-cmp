@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from .base_classes import Environment
 from .graph_environments import GraphEnvironment
 from .vehicles import Vehicle, MapObject
+from .AStar import AStar
 import random
 import heapq
 
 
-def distances(place: str, env: GraphEnvironment):
+def distances(place: str, env: GraphEnvironment) -> {str: int}:
     distance = {vertex: float('infinity') for vertex in env.get_places()}
     distance[place] = 0
 
@@ -26,6 +27,37 @@ def distances(place: str, env: GraphEnvironment):
                 heapq.heappush(pq, (new_distance, neighbor))
 
     return distance
+
+
+def shortest_paths(place: str, env: GraphEnvironment) -> {str: str}:
+    distance = {vertex: float('infinity') for vertex in env.get_places()}
+    path = {vertex: "" for vertex in env.get_places()}
+    distance[place] = 0
+
+    pq = [(0, place, "")]
+    while len(pq) > 0:
+        current_distance, current_vertex, parent = heapq.heappop(pq)
+        if current_distance > distance[current_vertex]:
+            continue
+        path[current_vertex] = parent
+
+        for neighbor, weight in env.edges[current_vertex].items():
+            new_distance = current_distance + weight
+
+            if new_distance < distance[neighbor]:
+                distance[neighbor] = new_distance
+                heapq.heappush(pq, (new_distance, neighbor, current_vertex))
+
+    return path
+
+
+def extract_path(finish: str, tree: {str: str}) -> [str]:
+    path = [finish]
+    while tree[finish]:
+        path.append(tree[finish])
+        finish = tree[finish]
+    path.reverse()
+    return path
 
 
 class PickUpVehicle(Vehicle):
@@ -51,9 +83,10 @@ class PickUpVehicle(Vehicle):
                     break
         return places
 
-    def build_tour(self, objectives: [str], env: Environment) -> {str: [int]}:
+    def build_tour(self, objectives: [str], env: Environment) -> None:
         places: [str] = env.get_places()
         distance = {place: distances(place, env) for place in places}
+        paths = {place: shortest_paths(place, env) for place in places}
         matrix = []
         for i, place in enumerate(places):
             if place in objectives or place == self.position:
@@ -64,11 +97,24 @@ class PickUpVehicle(Vehicle):
                 matrix.append(row)
         places = [place for place in places if place in objectives or place == self.position]
         hc = HillClimbing(matrix)
-        answer = hc.hill_climbing(places.index(self.position))
+        temp = hc.hill_climbing(places.index(self.position))
+        temp = [places[x] for x in temp]
+        answer = [self.position]
+        objectives = []
+        current = self.position
+        for i in temp[1:]:
+            path = extract_path(i, paths[current])
+            path = path[1:]
+            answer.extend(path)
+            for j in range(1, len(path)):
+                objectives.append([])
+            objectives.append([y.identifier for y in env.get_all_objects(i) if y.identifier != self.identifier])
+            current = i
+        answer = answer[1:]
         answer.reverse()
-        return {places[x]: [y.identifier for y in env.get_all_objects(places[x])
-                            if y.identifier != self.identifier]
-                for x in answer}
+        objectives.reverse()
+        self.tour.extend(answer)
+        self.objectives.extend(objectives)
 
 
 @dataclass
