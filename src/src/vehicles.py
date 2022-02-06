@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .base_classes import *
 from .AStar import AStarM
 from .environments import MapEnvironment
