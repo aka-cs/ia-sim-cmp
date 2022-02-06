@@ -1,7 +1,13 @@
 from .functions import Function
+from .scope import Scope
 
 
 class Type(type):
+    
+    def __new__(cls, *args, **kwargs):
+        cls.scope = Scope()
+        cls.scope.declare('init', Function('init', [], None))
+        return super(Type, cls).__new__(cls, *args, **kwargs)
 
     def __add__(self, other):
         if issubclass(self, String) or issubclass(other, String):

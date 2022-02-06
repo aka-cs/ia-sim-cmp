@@ -371,7 +371,7 @@ class TypeChecker(metaclass=Singleton):
                 if node.superclass:
                     super_class = self.get_class(node.superclass)
                 else:
-                    super_class = None
+                    super_class = self.get_class('Object')
                 created = Class(node.name.text, super_class, scope)
                 self.types.append(created)
         for _node in nodes:
@@ -392,11 +392,12 @@ class TypeChecker(metaclass=Singleton):
                     pass
                 self.scope.declare(node.name.text, Function(c_class.name, params, c_class))
 
-    def get_class(self, name: Token):
+    def get_class(self, name: Token | str):
+        text = name.text if isinstance(name, Token) else name
         for t in self.types:
-            if str(t) == name.text:
+            if str(t) == text:
                 return t
-        self.error(f"Class {name.text} not defined in scope", line=name.line)
+        self.error(f"Class {text} not defined in scope", line=name.line)
 
     def check_scope(self, name: str):
         try:
