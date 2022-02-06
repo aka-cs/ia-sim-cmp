@@ -102,7 +102,7 @@ class AStar:
         return []
 
 
-class AStarM(AStar):
+class MapAStar(AStar):
     @staticmethod
     def heuristic(current: str, objective: str, actors: [MapObject], map_env: MapEnvironment) -> float:
         if current not in map_env.positions or objective not in map_env.positions:

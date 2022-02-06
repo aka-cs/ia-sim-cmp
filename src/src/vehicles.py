@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .base_classes import MapObject, Agent, Event, LoadEvent, DownloadEvent, MovementEvent
 from .graph_environments import Environment, MapEnvironment
-from .AStar import AStarM
+from .AStar import MapAStar
 from abc import abstractmethod
 from random import choice
 
@@ -199,7 +199,7 @@ class Vehicle(Agent):
 class MapVehicle(Vehicle):
     def __init__(self, identifier: int, position: str):
         super().__init__(identifier, position)
-        self.IA = AStarM()
+        self.IA = MapAStar()
 
     @abstractmethod
     def update_cargo(self, cargo: MapObject, env: MapEnvironment) -> None:
