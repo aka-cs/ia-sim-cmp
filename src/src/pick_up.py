@@ -18,7 +18,7 @@ def distances(place: str, env: GraphEnvironment):
         if current_distance > distance[current_vertex]:
             continue
 
-        for neighbor, weight in env.edges[current_vertex].items():
+        for neighbor, weight in env.graph[current_vertex].items():
             new_distance = current_distance + weight
 
             if new_distance < distance[neighbor]:

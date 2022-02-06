@@ -1,22 +1,43 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from .base_classes import Event, SetEvent, DeleteEvent, MapObject, Agent, Position, Environment
 
 
-@dataclass
 class GraphEnvironment(Environment):
-    edges: {str: {str: float}}
+    """
+     Implementación particular de entorno, en el que hay noción de localizaciones y adyacencias entre estas.
+     Está representado sobre un grafo.
+    """
+    graph: {str: {str: float}}
     objects: {str: {int: MapObject}}
+
+    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}):
+        # Guardamos el grafo y los objetos del entorno.
+        self.graph = graph
+        self.objects = objects
+
+        # Nos aseguramos que la lista de objetos tenga el formato correcto.
+        # Por cada localización del grafo.
+        for place in graph:
+            # Si en el listado de objetos no existe esta localización, la añadimos sin objetos.
+            if place not in objects:
+                self.objects[place] = {}
+
+        # Si existe al menos una localización en la lista de objetos que no existe en el entorno,
+        # lanzamos excepción.
+        for place in objects:
+            if place not in graph:
+                raise Exception("Invalid objects list.")
 
     def get_places(self) -> [str]:
         """
         Devuelve las localizaciones del entorno simulado.
         """
-        return [place for place in self.edges]
+        # Construimos una lista de localizaciones y la devolvemos.
+        return [place for place in self.graph]
 
     def get_objects(self):
         """
-        Devuelve las objetos del entorno.
+        Devuelve los objetos del entorno.
         """
         # Lista para guardar las objetos del entorno.
         map_objects = []
@@ -55,12 +76,15 @@ class GraphEnvironment(Environment):
         """
         Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
         """
+        # Construimos una lista con los objetos en la posición dadda y la devolvemos.
         return [element for element in self.objects.get(position, {}).values()]
 
     def get_object(self, position: str, identifier: int) -> MapObject:
         """
         Devuelve el elemento del entorno simulado con el id especificado.
         """
+        # Si en la posición dada existe un objeto con el id especificado, lo devolvemos.
+        # En caso contrario devolvemos None.
         if position in self.objects and identifier in self.objects[position]:
             return self.objects[position][identifier]
 
@@ -68,22 +92,44 @@ class GraphEnvironment(Environment):
         """
         Coloca al elemento dado en la posición especificada del entorno simulado.
         """
-        if element.position in self.edges:
-            if element.position not in self.objects:
-                self.objects[element.position] = {}
+        # Si la posición especificada existe.
+        if element.position in self.graph:
+            # Guardamos el objeto dado en la posición especificada.
             self.objects[element.position][element.identifier] = element
 
     def remove_object(self, position: str, identifier: int) -> None:
         """
         Remueve al elemento dado en la posición especificada del entorno simulado.
         """
+        # Si en la posición dada existe un objeto con el id especificado, lo eliminamos.
         if position in self.objects and identifier in self.objects[position]:
             del self.objects[position][identifier]
 
 
-@dataclass
 class MapEnvironment(GraphEnvironment):
     positions: {str: Position}
 
+    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}, positions: {str: Position}):
+        # Guardamos el grafo y los objetos del entorno.
+        super().__init__(graph, objects)
+
+        # Guardamos las posiciones.
+        self.positions = positions
+
+        # Si existe al menos una localización en la lista de posiciones que no existe en el entorno,
+        # lanzamos excepción.
+        for place in positions:
+            if place not in graph:
+                raise Exception("Invalid positions list.")
+
+        # Si existe al menos una localización en la lista de objetos que no existe en el entorno,
+        # lanzamos excepción.
+        for place in graph:
+            if place not in positions:
+                raise Exception("Invalid positions list.")
+
     def get_position(self, name: str) -> Position:
+        """
+        Devuelve la posición asociada a la localización que recibe como argumento.
+        """
         return self.positions.get(name, None)

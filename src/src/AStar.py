@@ -7,19 +7,28 @@ from math import sqrt, inf
 
 
 class AStar:
+    """
+    Clase que recoge el algoritmo AStar para la construcción de caminos.
+    Posee un método que, dado un objetivo, y la información de objetos del entorno que pudieran tenerse en cuenta,
+    construye un camino que va de un origen a un objetivo.
+    Por defecto la heurística no tiene implementación, y de desearse una particular, basta con heredar de AStar e
+    implementar el método destinado al cálculo de la heurística.
+    """
     @staticmethod
     @abstractmethod
     def heuristic(current: str, objective: str, actors: [MapObject], graph: GraphEnvironment) -> float:
         """
         Heuristica de AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
-        para calcular la heuristica, dígase, la posición actual, la posicion objetivo, una lista de
+        para calcular la heuristica, dígase, la localización actual, la localización objetivo, una lista de
         actores tener en cuenta y el entorno simulado.
         """
         pass
 
     def algorithm(self, origin: str, destiny: str, actors: [MapObject], graph: GraphEnvironment) -> [str]:
         """
-        Algoritmo AStar.
+        Algoritmo AStar, recibe todos los objetos de los cuales pudiera ser necesaria información
+        para calcular la heuristica, dígase, la localización actual, la localización objetivo, una lista de
+        actores tener en cuenta y el entorno simulado.
         """
         # Conjunto salida.
         open_lst: {str} = {origin}
@@ -103,11 +112,22 @@ class AStar:
 
 
 class MapAStar(AStar):
+    """
+    Clase que recoge el algoritmo AStar para la construcción de caminos en un MapEnvironment.
+    Posee un método que, dado un objetivo, y la información de objetos del entorno que pudieran tenerse en cuenta,
+    construye un camino que va de un origen a un objetivo.
+    Por defecto emplea la distancia euclidiana entre dos puntos como heurística de longitud de camino entre estos.
+    """
     @staticmethod
     def heuristic(current: str, objective: str, actors: [MapObject], map_env: MapEnvironment) -> float:
+        # Si la localización actual, o la localización objetivo, no se encuentran en el entorno, devolvemos infinito
+        # como medida de distancia.
         if current not in map_env.positions or objective not in map_env.positions:
             return inf
+        # Obtenemos la posición actual.
         current_position: Position = map_env.positions[current]
+        # Obtenemos la posición objetivo.
         objective_position: Position = map_env.positions[objective]
+        # Devolvemos la distancia euclidiana entre los puntos como heurística de distancia.
         return sqrt((current_position.x - objective_position.x)**2
                     + (current_position.y - objective_position.y)**2)

@@ -19,7 +19,6 @@ class Agent(MapObject):
     """
     Clase agente. Engloba a los elementos que pueden actuar en el entorno.
     """
-
     @abstractmethod
     def update_state(self, event: Event, env: Environment) -> [Event]:
         """
@@ -102,12 +101,21 @@ class DownloadEvent(Event):
 
 @dataclass
 class Position:
+    """
+    Clase que especifica la posición (coordenadas) de una localización u objeto en el entorno.
+    """
     x: int
     y: int
 
 
 @dataclass
 class Environment:
+    """
+    Representa al entorno donde se desarrolla la simulación, y en él se deben encontrar dispuestos todos los objetos
+    y agentes de este. En si mismo, el entorno funge como agente, en el sentido de que, mediante una función de cambio
+    de estados/función de acción, este revisa el estado en que se encuentra y el evento que se está llevando a cabo,
+    y se modifica a sí mismo, a los objetos y a los agentes que se encuentran en él a consecuencia.
+    """
     @abstractmethod
     def get_places(self) -> [str]:
         """
@@ -132,7 +140,7 @@ class Environment:
     @abstractmethod
     def get_object(self, position: str, identifier: int) -> MapObject:
         """
-        Devuelve el elemento del entorno simulado con el id especificado.
+        Devuelve el elemento del entorno simulado en la posición dada con el id especificado.
         """
         pass
 
@@ -146,6 +154,6 @@ class Environment:
     @abstractmethod
     def remove_object(self, position: str, identifier: int) -> None:
         """
-        Remueve al elemento del id especificado de la posición dada en el entorno simulado.
+        Remueve al elemento del id especificado de la posición dada del entorno simulado.
         """
         pass

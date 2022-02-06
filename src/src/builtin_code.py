@@ -8,6 +8,10 @@ from math import inf
 import heapq
 
 
+def golden() -> float:
+    return (1 + 5 ** 0.5) / 2
+
+
 def infinity() -> float:
     return inf
 

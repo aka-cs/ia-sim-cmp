@@ -6,6 +6,16 @@ from math import inf
 
 
 class MonteCarloTreeSearchNode:
+    """
+     Implementación del algoritmo Monte Carlo Tree Search para la selección del próximo objetivo de un agente.
+     Recibe una lista de objetivos y, asumiendo que es aspiración del agente recogerlos todos, analiza varios
+     ordenes a seguir para visitarlos todos y en base a esta información establece cuál es el mejor para elegir
+     como próximo objetivo.
+     Para ponderar los nodos hojas del árbol de decisiones que construye el algoritmo, la clase recibe una heurística
+     (una instancia de MonteCarloHeuristic) que pondera en base a información pertinente al problema que se ataca.
+     Por defecto la heurística no posee implementación, por lo que para usar la clase es necesario heredar de
+     MonteCarloHeuristic e implementar una heurística consecuente.
+    """
     def __init__(self, untried_positions: [MapObject], agent: Agent, env: Environment, heuristic: MonteCarloHeuristic,
                  parent: MonteCarloTreeSearchNode, parent_choice: MapObject):
         # Posiciones no probadas a tomar aún.
@@ -163,10 +173,16 @@ class MonteCarloTreeSearchNode:
 
 
 class MonteCarloHeuristic:
+    """
+    Heurística de MonteCarloTreeSearch.
+    """
     def __init__(self):
         pass
 
     @staticmethod
     @abstractmethod
     def heuristic(path: [MapObject], agent: Agent, env: Environment) -> float:
+        """
+        Método para cálculo de la heurística.
+        """
         pass
