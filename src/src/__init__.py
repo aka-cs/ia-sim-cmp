@@ -1,2 +1,4 @@
 from .builtin_code import MapObject, Agent, Event, SetEvent, DeleteEvent, MovementEvent, LoadEvent, DownloadEvent, \
-    Environment, Vehicle, infinity, simulate_environment
+    Position, Environment, GraphEnvironment, MapEnvironment, AStar, AStarM, MonteCarloTreeSearchNode, Vehicle, \
+    VehicleM, infinity, simulate_environment
+

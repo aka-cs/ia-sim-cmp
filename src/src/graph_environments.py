@@ -1,50 +1,6 @@
 from __future__ import annotations
-from .base_classes import *
-
-
-@dataclass
-class Environment:
-    @abstractmethod
-    def get_places(self) -> [str]:
-        """
-        Devuelve las localizaciones del entorno simulado.
-        """
-        pass
-
-    @abstractmethod
-    def update_state(self, event: Event) -> [Event]:
-        """
-        Dado un evento, actualiza el entorno simulado.
-        """
-        pass
-
-    @abstractmethod
-    def get_all_objects(self, position: str) -> [MapObject]:
-        """
-        Devuelve el listado de objetos localizados en la posición dada del entorno simulado.
-        """
-        pass
-
-    @abstractmethod
-    def get_object(self, position: str, identifier: int) -> MapObject:
-        """
-        Devuelve el elemento del entorno simulado con el id especificado.
-        """
-        pass
-
-    @abstractmethod
-    def set_object(self, element: MapObject) -> None:
-        """
-        Coloca al elemento dado en la posición especificada del entorno simulado.
-        """
-        pass
-
-    @abstractmethod
-    def remove_object(self, position: str, identifier: int) -> None:
-        """
-        Remueve al elemento del id especificado de la posición dada en el entorno simulado.
-        """
-        pass
+from dataclasses import dataclass
+from .base_classes import Event, SetEvent, DeleteEvent, MapObject, Agent, Position, Environment
 
 
 @dataclass

@@ -1,7 +1,8 @@
 from __future__ import annotations
-from .base_classes import *
+from .base_classes import MapObject, Agent, Event, LoadEvent, DownloadEvent, MovementEvent
+from .graph_environments import Environment, MapEnvironment
 from .AStar import AStarM
-from .environments import MapEnvironment
+from abc import abstractmethod
 from random import choice
 
 

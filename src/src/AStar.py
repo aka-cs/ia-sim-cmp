@@ -1,5 +1,7 @@
 from __future__ import annotations
-from .environments import *
+from .base_classes import MapObject, Position
+from .graph_environments import GraphEnvironment, MapEnvironment
+from abc import abstractmethod
 from typing import Union
 from math import sqrt, inf
 

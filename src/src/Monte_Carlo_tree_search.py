@@ -1,5 +1,6 @@
 from __future__ import annotations
-from .base_classes import *
+from .base_classes import MapObject, Agent, Environment
+from abc import abstractmethod
 from random import shuffle
 from math import inf
 
@@ -99,7 +100,7 @@ class MonteCarloTreeSearchNode:
         child_untried_positions.extend(self._untried_positions)
 
         # Obtenemos el nodo correspondiente al nuevo estado.
-        child_node = MonteCarloTreeSearchNode(child_untried_positions, self._env, self, position)
+        child_node = MonteCarloTreeSearchNode(child_untried_positions, self._agent, self._env, self, position)
 
         # Lo añadimos como hijo del nodo actual.
         self._children.append(child_node)
