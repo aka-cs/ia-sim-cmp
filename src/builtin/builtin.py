@@ -51,6 +51,8 @@ def get_classes(module=src) -> [Class]:
         for function in inspect.getmembers(_class[1], inspect.isfunction):
             function_name = function[0] if function[0] != "__init__" else "init"
             c_class.scope.declare(function_name, get_builtin_function(function))
+        if not c_class.scope.father and not c_class.scope.get('init', safe=True):
+            c_class.scope.declare('init', Function('init', [], None))
         for var in _class[1].__annotations__:
             _type = get_type(_class[1].__annotations__[var])
             c_class.scope.declare(var, _type)

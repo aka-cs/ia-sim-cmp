@@ -12,12 +12,14 @@ class Scope:
         else:
             raise Exception(f"Variable {name} already exists")
 
-    def get(self, name: str):
+    def get(self, name: str, *, safe=False):
         if name in self.variables:
             return self.variables[name]
         if self.father:
-            return self.father.get(name)
-        raise Exception(f"Variable {name} not defined")
+            return self.father.get(name, safe=safe)
+        if not safe:
+            raise Exception(f"Variable {name} not defined")
+        return False
 
     def assign(self, name: str, value: object):
         if name in self.variables:
