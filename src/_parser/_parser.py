@@ -97,8 +97,8 @@ class Parser(metaclass=Singleton):
 
             p_var_declaration > (var_s + identifier + p_var_type + equals + p_equality + semicolon,
                                  lambda x: VarDeclaration(x[1], x[2], x[4])),
-            p_attr > (attr + identifier + p_var_type + equals + p_equality + semicolon,
-                      lambda x: AttrDeclaration(x[1], x[2], x[4])),
+            p_attr > (attr + identifier + colon + p_type + equals + p_equality + semicolon,
+                      lambda x: AttrDeclaration(x[1], x[3], x[5])),
             p_var_type > (colon + p_type | e, lambda x: x[1], lambda x: None),
             p_type > (
                 identifier + less + p_types + greater | identifier, lambda x: VarType(x[0], *x[2]),

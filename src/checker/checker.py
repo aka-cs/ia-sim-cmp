@@ -276,6 +276,13 @@ class TypeChecker(metaclass=Singleton):
         created = self.get_class(expression.name)
         self.current_class = created
         expression.methods.sort(key=lambda x: {"init": 0}.get(x.name.text, 1))
+        attributes = []
+        for attr_name, attr_type in created.scope.variables.items():
+            if isinstance(attr_type, Function):
+                continue
+            attributes.append(attr_name)
+        for attribute in attributes:
+            del created.scope.variables[attribute]
         self.check_block(expression.methods, created.scope)
         self.current_class = None
 
@@ -390,6 +397,13 @@ class TypeChecker(metaclass=Singleton):
                     params = init.param_types
                 except TypeError:
                     pass
+                for method in node.methods: #  type: FunctionNode
+                    if method.name.text == 'init':
+                        for statement in method.body: #  type: Statement
+                            cur_node = statement.code
+                            if isinstance(cur_node, AttrDeclaration):
+                                var_type = cur_node.type.check(self)
+                                c_class.scope.declare(cur_node.name.text, var_type)
                 self.scope.declare(node.name.text, Function(c_class.name, params, c_class))
 
     def get_class(self, name: Token | str):
