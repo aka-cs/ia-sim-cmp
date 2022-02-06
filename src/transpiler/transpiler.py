@@ -120,6 +120,8 @@ class Transpiler:
             return f'{left} and {right}'
         if binary.operator.type == TokenType.OR:
             return f'{left} or {right}'
+        if binary.operator.type == TokenType.MODULO:
+            return f'{left} % {right}'
 
     @visitor(Variable)
     def eval(self, variable: Variable, tabs: int = 0):
