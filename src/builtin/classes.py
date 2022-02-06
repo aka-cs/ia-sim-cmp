@@ -33,4 +33,4 @@ class Class(Type):
         try:
             return self.scope.get(item)
         except:
-            raise TypeError(f"{self.name} type has no property or method {item}")
+            raise AttributeError(f"{self.name} type has no property or method {item}")
