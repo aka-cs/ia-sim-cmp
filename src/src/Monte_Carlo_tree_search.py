@@ -6,7 +6,7 @@ from math import inf
 
 
 class MonteCarloTreeSearchNode:
-    def __init__(self, untried_positions: [MapObject], agent: Agent, env: Environment,
+    def __init__(self, untried_positions: [MapObject], agent: Agent, env: Environment, heuristic: MonteCarloHeuristic,
                  parent: MonteCarloTreeSearchNode, parent_choice: MapObject):
         # Posiciones no probadas a tomar aún.
         self._untried_positions = untried_positions
@@ -14,6 +14,9 @@ class MonteCarloTreeSearchNode:
         # Guardamos el entorno y los agentes a tener en cuenta.
         self._env = env
         self._agent = agent
+
+        # Guardamos la heuristica.
+        self._heuristic = heuristic
 
         # Padre del nodo actual.
         self._parent = parent
@@ -100,7 +103,8 @@ class MonteCarloTreeSearchNode:
         child_untried_positions.extend(self._untried_positions)
 
         # Obtenemos el nodo correspondiente al nuevo estado.
-        child_node = MonteCarloTreeSearchNode(child_untried_positions, self._agent, self._env, self, position)
+        child_node = MonteCarloTreeSearchNode(child_untried_positions, self._agent, self._env, self._heuristic,
+                                              self, position)
 
         # Lo añadimos como hijo del nodo actual.
         self._children.append(child_node)
@@ -117,7 +121,7 @@ class MonteCarloTreeSearchNode:
         path.extend(valid_options)
 
         # Calculamos el valor de la heuristica para este estado.
-        self._weight = self.heuristic(path, self._agent, self._env)
+        self._weight = self._heuristic.heuristic(path, self._agent, self._env)
 
         # Devolvemos el valor de esta solución.
         return self._weight
@@ -156,6 +160,11 @@ class MonteCarloTreeSearchNode:
     # Devuelve la elección del padre, que conllevó a la génesis de este nodo.
     def parent_choice(self):
         return self._parent_choice
+
+
+class MonteCarloHeuristic:
+    def __init__(self):
+        pass
 
     @staticmethod
     @abstractmethod
