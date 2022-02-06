@@ -196,7 +196,7 @@ class Vehicle(Agent):
         pass
 
 
-class VehicleM(Vehicle):
+class MapVehicle(Vehicle):
     def __init__(self, identifier: int, position: str):
         super().__init__(identifier, position)
         self.IA = AStarM()
