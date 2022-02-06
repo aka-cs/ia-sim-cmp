@@ -51,7 +51,7 @@ class PickUpVehicle(Vehicle):
                     break
         return places
 
-    def build_tour(self, objectives: [str], env: Environment) -> {str: [int]}:
+    def build_tour(self, objectives: [str], env: Environment) -> None:
         places: [str] = env.get_places()
         distance = {place: distances(place, env) for place in places}
         matrix = []
@@ -65,10 +65,12 @@ class PickUpVehicle(Vehicle):
         places = [place for place in places if place in objectives or place == self.position]
         hc = HillClimbing(matrix)
         answer = hc.hill_climbing(places.index(self.position))
+        answer = answer[1:]
         answer.reverse()
-        return {places[x]: [y.identifier for y in env.get_all_objects(places[x])
-                            if y.identifier != self.identifier]
-                for x in answer}
+        self.tour.extend([places[x] for x in answer])
+        self.objectives.extend([[y.identifier for y in env.get_all_objects(places[x])
+                                 if y.identifier != self.identifier]
+                                for x in answer])
 
 
 @dataclass
