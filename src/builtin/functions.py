@@ -9,3 +9,6 @@ class Function:
     def __str__(self):
         return Function.__qualname__
 
+    def getattr(self, name):
+        raise AttributeError("Invalid attribute or method access")
+
