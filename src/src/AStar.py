@@ -77,9 +77,9 @@ class AStar:
                 return path
 
             # En caso de que v no sea del conjunto objetivo, visitamos cada adyacente w de v.
-            for w in graph.edges[v]:
+            for w in graph.graph[v]:
                 # Obtenemos el peso del arco que los une.
-                weight: float = graph.edges[v][w]
+                weight: float = graph.graph[v][w]
                 # Si w no pertenece al conjunto origen ni al conjunto objetivo.
                 if w not in open_lst and w not in closed_lst:
                     # Lo añadimos al conjunto origen ahora que fue visitado.

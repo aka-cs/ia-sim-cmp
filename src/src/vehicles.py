@@ -181,7 +181,7 @@ class Vehicle(Agent):
     @abstractmethod
     def build_tour(self, objectives: [str], env: Environment) -> None:
         """
-        Escoge, entre una serie de localizaciones, la del próximo objetivo.
+        Construye la ruta a seguir por el vehiculo y actualiza sus objetivos.
         """
         pass
 
@@ -193,39 +193,67 @@ class MapVehicle(Vehicle):
 
     @abstractmethod
     def update_cargo(self, cargo: MapObject, env: MapEnvironment) -> None:
+        """
+        Actualiza el estado de una carga.
+        """
         pass
 
     @abstractmethod
     def get_objectives_in(self, position: str, env: MapEnvironment) -> [MapObject]:
+        """
+         Localiza en una posición los posibles objetivos del taxi.
+         """
         pass
 
     @abstractmethod
     def get_objectives(self, env: MapEnvironment) -> [str]:
+        """
+         Localiza en el mapa los posibles objetivos del taxi.
+         """
         pass
 
     @abstractmethod
     def get_destiny(self, cargo: MapObject, env: MapEnvironment) -> str:
+        """
+        Obtiene el destino del elemento especificado.
+        """
         pass
 
     @staticmethod
     def select_objective(objectives: [MapObject], env: MapEnvironment) -> MapObject:
+        """
+        Selecciona un objetivo entre una serie de ellos.
+        """
+        # Selecciona un objetivo al azar.
         return choice(objectives)
 
     def build_tour(self, objectives_positions: [str], env: MapEnvironment) -> None:
+        """
+        Construye la ruta a seguir por el vehiculo y actualiza sus objetivos.
+        """
+        # Si no hay posiciones objetivo, retornamos.
         if not objectives_positions:
             return
 
+        # Lista de objetivos.
         objectives = []
+        # Por cada posición en las posiciones objetivo.
         for position in objectives_positions:
+            # Añadimos todos los objetivos en esta posición.
             objectives.extend(self.get_objectives_in(position, env))
+        # Seleccionamos un objetivo como primer objetivo.
         objective = self.select_objective(objectives, env)
+        # Actualizamos el estado del objetivo (lo reservamos).
         self.update_cargo(objective, env)
+        # Obtenemos el destino del objetivo.
         destiny = self.get_destiny(objective, env)
 
+        # Construimos el camino del objetivo al destino.
         self.tour = self.IA.algorithm(objective.position, destiny, [], env)
         self.objectives = [[] for _ in range(len(self.tour) - 1)]
         self.objectives.append([objective.identifier])
 
+        # Construimos el objetivo del origen al objetivo.
         self.tour.extend(self.IA.algorithm(self.position, objective.position, [], env))
         self.objectives.extend([[] for _ in range(len(self.tour) - len(self.objectives))])
 
