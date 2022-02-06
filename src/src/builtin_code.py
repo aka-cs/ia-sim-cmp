@@ -22,6 +22,7 @@ def simulate_environment(env: Environment, initial_events: [Event], total_time: 
     """
     actual_event = None
     events = [event for event in initial_events]
+    events.sort()
     while events and (actual_event := heapq.heappop(events)) and actual_event.time <= total_time:
         for event in env.update_state(actual_event):
             heapq.heappush(events, event)

@@ -176,9 +176,6 @@ class MonteCarloHeuristic:
     """
     Heurística de MonteCarloTreeSearch.
     """
-    def __init__(self):
-        pass
-
     @staticmethod
     @abstractmethod
     def heuristic(path: [MapObject], agent: Agent, env: Environment) -> float:
