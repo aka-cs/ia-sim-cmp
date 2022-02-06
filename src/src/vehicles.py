@@ -79,17 +79,7 @@ class Vehicle(Agent):
             places = self.get_objectives(env)
 
             # Calcula el nuevo recorrido.
-            tour = self.build_tour(places, env)
-            # Por cada localizacion del recorrido.
-            for place in tour:
-                # Añadimos la localizacion al tour del vehículo.
-                self.tour.append(place)
-                # Añadimos los objetivos en esta posición a la lista de objetivos.
-                self.objectives.append(tour[place])
-
-                # Actualizamos el estado de cada objeto objetivo.
-                for objective_id in tour[place]:
-                    self.update_cargo(env.get_object(place, objective_id), env)
+            self.build_tour(places, env)
 
             # Si queda camino por recorrer, emitimos un evento de movimiento.
             return [MovementEvent(event.time + 1, self.identifier)] if self.tour else []
@@ -189,7 +179,7 @@ class Vehicle(Agent):
         pass
 
     @abstractmethod
-    def build_tour(self, objectives: [str], env: Environment) -> {str: [int]}:
+    def build_tour(self, objectives: [str], env: Environment) -> None:
         """
         Escoge, entre una serie de localizaciones, la del próximo objetivo.
         """
@@ -221,17 +211,21 @@ class MapVehicle(Vehicle):
     def select_objective(objectives: [MapObject], env: MapEnvironment) -> MapObject:
         return choice(objectives)
 
-    def build_tour(self, objectives_positions: [str], env: MapEnvironment) -> {str: [int]}:
+    def build_tour(self, objectives_positions: [str], env: MapEnvironment) -> None:
+        if not objectives_positions:
+            return
+
         objectives = []
         for position in objectives_positions:
             objectives.extend(self.get_objectives_in(position, env))
         objective = self.select_objective(objectives, env)
+        self.update_cargo(objective, env)
         destiny = self.get_destiny(objective, env)
 
-        first_path = self.IA.algorithm(self.position, objective.position, [], env)
-        second_path = self.IA.algorithm(objective.position, destiny, [], env)
+        self.tour = self.IA.algorithm(objective.position, destiny, [], env)
+        self.objectives = [[] for _ in range(len(self.tour) - 1)]
+        self.objectives.append([objective.identifier])
 
-        path = {position: [] for position in first_path}
-        path.update({position: [] for position in second_path})
-        path[destiny] = [objective.identifier]
-        return path
+        self.tour.extend(self.IA.algorithm(self.position, objective.position, [], env))
+        self.objectives.extend([[] for _ in range(len(self.tour) - len(self.objectives))])
+
