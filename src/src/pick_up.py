@@ -1,10 +1,7 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-
-from .base_classes import Environment
 from .graph_environments import GraphEnvironment
 from .vehicles import Vehicle, MapObject
-from .AStar import AStar
 import random
 import heapq
 
@@ -41,7 +38,7 @@ def shortest_paths(place: str, env: GraphEnvironment) -> {str: str}:
             continue
         path[current_vertex] = parent
 
-        for neighbor, weight in env.edges[current_vertex].items():
+        for neighbor, weight in env.graph[current_vertex].items():
             new_distance = current_distance + weight
 
             if new_distance < distance[neighbor]:
@@ -68,13 +65,13 @@ class PickUpVehicle(Vehicle):
         self.origin = position
 
     @abstractmethod
-    def update_cargo(self, cargo: MapObject, env: Environment) -> None:
+    def update_cargo(self, cargo: MapObject, env: GraphEnvironment) -> None:
         pass
 
-    def get_destiny(self, cargo: MapObject, env: Environment) -> str:
+    def get_destiny(self, cargo: MapObject, env: GraphEnvironment) -> str:
         return self.origin
 
-    def get_objectives(self, env: Environment) -> [str]:
+    def get_objectives(self, env: GraphEnvironment) -> [str]:
         places = []
         for place in env.get_places():
             for obj in env.get_all_objects(place):
@@ -83,7 +80,7 @@ class PickUpVehicle(Vehicle):
                     break
         return places
 
-    def build_tour(self, objectives: [str], env: Environment) -> None:
+    def build_tour(self, objectives: [str], env: GraphEnvironment) -> None:
         places: [str] = env.get_places()
         distance = {place: distances(place, env) for place in places}
         paths = {place: shortest_paths(place, env) for place in places}
@@ -142,7 +139,8 @@ class HillClimbing:
             route_length += self.distances[solution[i - 1]][solution[i]]
         return route_length
 
-    def get_neighbours(self, solution: [int]) -> [[int]]:
+    @staticmethod
+    def get_neighbours(solution: [int]) -> [[int]]:
         neighbours = []
         for i in range(1, len(solution) - 1):
             for j in range(i + 1, len(solution) - 1):
