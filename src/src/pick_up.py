@@ -1,129 +1,84 @@
 from abc import abstractmethod
-from dataclasses import dataclass
+
+from .base_classes import Environment
 from .graph_environments import GraphEnvironment
 from .vehicles import Vehicle, MapObject
 import random
 import heapq
 
 
-def distances(place: str, env: GraphEnvironment) -> {str: int}:
-    distance = {vertex: float('infinity') for vertex in env.get_places()}
-    distance[place] = 0
+class DistanceAndPathCalc:
+    distances: {str: {str: int}}
+    paths: {str: {str: str}}
 
-    pq = [(0, place)]
-    while len(pq) > 0:
-        current_distance, current_vertex = heapq.heappop(pq)
-        if current_distance > distance[current_vertex]:
-            continue
+    def __init__(self):
+        self.distances = {}
+        self.paths = {}
 
-        for neighbor, weight in env.graph[current_vertex].items():
-            new_distance = current_distance + weight
-
-            if new_distance < distance[neighbor]:
-                distance[neighbor] = new_distance
-                heapq.heappush(pq, (new_distance, neighbor))
-
-    return distance
-
-
-def shortest_paths(place: str, env: GraphEnvironment) -> {str: str}:
-    distance = {vertex: float('infinity') for vertex in env.get_places()}
-    path = {vertex: "" for vertex in env.get_places()}
-    distance[place] = 0
-
-    pq = [(0, place, "")]
-    while len(pq) > 0:
-        current_distance, current_vertex, parent = heapq.heappop(pq)
-        if current_distance > distance[current_vertex]:
-            continue
-        path[current_vertex] = parent
-
-        for neighbor, weight in env.graph[current_vertex].items():
-            new_distance = current_distance + weight
-
-            if new_distance < distance[neighbor]:
-                distance[neighbor] = new_distance
-                heapq.heappush(pq, (new_distance, neighbor, current_vertex))
-
-    return path
-
-
-def extract_path(finish: str, tree: {str: str}) -> [str]:
-    path = [finish]
-    while tree[finish]:
-        path.append(tree[finish])
-        finish = tree[finish]
-    path.reverse()
-    return path
-
-
-class PickUpVehicle(Vehicle):
-    origin: str
-
-    def __init__(self, identifier: int, position: str):
-        super().__init__(identifier, position)
-        self.origin = position
-
-    @abstractmethod
-    def update_cargo(self, cargo: MapObject, env: GraphEnvironment) -> None:
-        pass
-
-    def get_destiny(self, cargo: MapObject, env: GraphEnvironment) -> str:
-        return self.origin
-
-    def get_objectives(self, env: GraphEnvironment) -> [str]:
-        places = []
+    def calc(self, env: GraphEnvironment):
         for place in env.get_places():
-            for obj in env.get_all_objects(place):
-                if not isinstance(obj, Vehicle):
-                    places.append(place)
-                    break
-        return places
+            self.distances[place] = self.calc_distances(place, env)
+            self.paths[place] = self.calc_paths(place, env)
 
-    def build_tour(self, objectives: [str], env: GraphEnvironment) -> None:
-        places: [str] = env.get_places()
-        distance = {place: distances(place, env) for place in places}
-        paths = {place: shortest_paths(place, env) for place in places}
-        matrix = []
-        for i, place in enumerate(places):
-            if place in objectives or place == self.position:
-                row = []
-                for target in places:
-                    if target in objectives or target == self.position:
-                        row.append(distance[place][target])
-                matrix.append(row)
-        places = [place for place in places if place in objectives or place == self.position]
-        hc = HillClimbing(matrix)
-        temp = hc.hill_climbing(places.index(self.position))
-        temp = [places[x] for x in temp]
-        answer = [self.position]
-        objectives = []
-        current = self.position
-        for i in temp[1:]:
-            path = extract_path(i, paths[current])
-            path = path[1:]
-            answer.extend(path)
-            for j in range(1, len(path)):
-                objectives.append([])
-            objectives.append([y.identifier for y in env.get_all_objects(i) if y.identifier != self.identifier])
-            current = i
-        answer = answer[1:]
-        answer.reverse()
-        objectives.reverse()
-        self.tour.extend(answer)
-        self.objectives.extend(objectives)
+    @staticmethod
+    def calc_distances(place: str, env: GraphEnvironment) -> {str: int}:
+        distance = {vertex: float('infinity') for vertex in env.get_places()}
+        distance[place] = 0
+
+        pq = [(0, place)]
+        while len(pq) > 0:
+            current_distance, current_vertex = heapq.heappop(pq)
+            if current_distance > distance[current_vertex]:
+                continue
+
+            for neighbor, weight in env.graph[current_vertex].items():
+                new_distance = current_distance + weight
+
+                if new_distance < distance[neighbor]:
+                    distance[neighbor] = new_distance
+                    heapq.heappush(pq, (new_distance, neighbor))
+        return distance
+
+    @staticmethod
+    def calc_paths(place: str, env: GraphEnvironment) -> {str: int}:
+        distance = {vertex: float('infinity') for vertex in env.get_places()}
+        path = {vertex: "" for vertex in env.get_places()}
+        distance[place] = 0
+
+        pq = [(0, place, "")]
+        while len(pq) > 0:
+            current_distance, current_vertex, parent = heapq.heappop(pq)
+            if current_distance > distance[current_vertex]:
+                continue
+            path[current_vertex] = parent
+
+            for neighbor, weight in env.graph[current_vertex].items():
+                new_distance = current_distance + weight
+
+                if new_distance < distance[neighbor]:
+                    distance[neighbor] = new_distance
+                    heapq.heappush(pq, (new_distance, neighbor, current_vertex))
+        return path
+
+    @staticmethod
+    def get_path(finish: str, path: {str: str}) -> [str]:
+        final_path = [finish]
+        while path[finish]:
+            final_path.append(path[finish])
+            finish = path[finish]
+        final_path.reverse()
+        return final_path
 
 
-@dataclass
 class HillClimbing:
-    distances: [[int]]
 
-    def random_solution(self, start: int) -> [int]:
-        cities = list(range(len(self.distances)))
+    @staticmethod
+    def random_solution(start: int, distances: [[int]]) -> [int]:
+        cities = list(range(len(distances)))
         cities.remove(start)
         solution = [start]
 
-        for i in range(len(self.distances)):
+        for i in range(len(distances)):
             if i == start:
                 continue
             random_city = cities[random.randint(0, len(cities) - 1)]
@@ -133,10 +88,11 @@ class HillClimbing:
         solution.append(start)
         return solution
 
-    def route_length(self, solution: [int]) -> int:
+    @staticmethod
+    def route_length(solution: [int], distances: [[int]]) -> int:
         route_length = 0
         for i in range(len(solution)):
-            route_length += self.distances[solution[i - 1]][solution[i]]
+            route_length += distances[solution[i - 1]][solution[i]]
         return route_length
 
     @staticmethod
@@ -150,30 +106,94 @@ class HillClimbing:
                 neighbours.append(neighbour)
         return neighbours
 
-    def get_best_neighbour(self, neighbours: [[int]]) -> [int]:
-        best_route_length = self.route_length(neighbours[0])
+    @staticmethod
+    def get_best_neighbour(neighbours: [[int]], distances: [[int]]) -> [int]:
+        best_route_length = HillClimbing.route_length(neighbours[0], distances)
         best_neighbour = neighbours[0]
         for neighbour in neighbours:
-            current_route_length = self.route_length(neighbour)
+            current_route_length = HillClimbing.route_length(neighbour, distances)
             if current_route_length < best_route_length:
                 best_route_length = current_route_length
                 best_neighbour = neighbour
         return best_neighbour
 
-    def hill_climbing(self, start: int) -> [int]:
-        current_solution = self.random_solution(start)
+    @staticmethod
+    def hill_climbing(start: int, distances: [[int]]) -> [int]:
+        current_solution = HillClimbing.random_solution(start, distances)
         if len(current_solution) <= 3:
             return current_solution
-        current_route_length = self.route_length(current_solution)
-        neighbours = self.get_neighbours(current_solution)
-        best_neighbour = self.get_best_neighbour(neighbours)
-        best_neighbour_route_length = self.route_length(best_neighbour)
+        current_route_length = HillClimbing.route_length(current_solution, distances)
+        neighbours = HillClimbing.get_neighbours(current_solution)
+        best_neighbour = HillClimbing.get_best_neighbour(neighbours, distances)
+        best_neighbour_route_length = HillClimbing.route_length(best_neighbour, distances)
 
         while best_neighbour_route_length < current_route_length:
             current_solution = best_neighbour
             current_route_length = best_neighbour_route_length
-            neighbours = self.get_neighbours(current_solution)
-            best_neighbour = self.get_best_neighbour(neighbours)
-            best_neighbour_route_length = self.route_length(best_neighbour)
+            neighbours = HillClimbing.get_neighbours(current_solution)
+            best_neighbour = HillClimbing.get_best_neighbour(neighbours, distances)
+            best_neighbour_route_length = HillClimbing.route_length(best_neighbour, distances)
 
         return current_solution
+
+
+class PickUpVehicle(Vehicle):
+    origin: str
+    calculator: DistanceAndPathCalc
+    path_opt: HillClimbing
+
+    def __init__(self, identifier: int, position: str):
+        super().__init__(identifier, position)
+        self.origin = position
+        self.calculator = DistanceAndPathCalc()
+        self.path_opt = HillClimbing()
+
+    @abstractmethod
+    def update_cargo(self, cargo: MapObject, env: Environment) -> None:
+        pass
+
+    def get_destiny(self, cargo: MapObject, env: Environment) -> str:
+        return self.origin
+
+    def get_objectives(self, env: Environment) -> [str]:
+        places = []
+        for place in env.get_places():
+            for obj in env.get_all_objects(place):
+                if not isinstance(obj, Vehicle):
+                    places.append(place)
+                    break
+        return places
+
+    def build_tour(self, objectives: [str], env: Environment) -> None:
+        places: [str] = env.get_places()
+        self.calculator.calc(env)
+        distance = self.calculator.distances
+        paths = self.calculator.paths
+        matrix = []
+        for i, place in enumerate(places):
+            if place in objectives or place == self.position:
+                row = []
+                for target in places:
+                    if target in objectives or target == self.position:
+                        row.append(distance[place][target])
+                matrix.append(row)
+        places = [place for place in places if place in objectives or place == self.position]
+        hc = HillClimbing()
+        temp = hc.hill_climbing(places.index(self.position), matrix)
+        temp = [places[x] for x in temp]
+        answer = [self.position]
+        objectives = []
+        current = self.position
+        for i in temp[1:]:
+            path = self.calculator.get_path(i, paths[current])
+            path = path[1:]
+            answer.extend(path)
+            for j in range(1, len(path)):
+                objectives.append([])
+            objectives.append([y.identifier for y in env.get_all_objects(i) if y.identifier != self.identifier])
+            current = i
+        answer = answer[1:]
+        answer.reverse()
+        objectives.reverse()
+        self.tour.extend(answer)
+        self.objectives.extend(objectives)
