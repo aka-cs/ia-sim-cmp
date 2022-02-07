@@ -16,14 +16,21 @@ from sys import stderr
 
 
 if __name__ == '__main__':
-
-    if len(sys.argv) > 1:
-        if not Path(sys.argv[1]).is_file():
-            print(f"File \"{sys.argv[1]}\" not found", file=stderr)
-            exit(1)
-        path = sys.argv[1]
+    
+    if os.getenv("FILE"):
+        path = Path('run') / os.getenv("FILE")
     else:
-        path = 'src/test/program.kt'
+        if len(sys.argv) > 1:
+            path = Path(sys.argv[1])
+            if not path.is_file():
+                print(f"File \"{sys.argv[1]}\" not found", file=stderr)
+                exit(1)
+        else:
+            path = Path('run/program.kt')
+        
+    if not path.exists():
+        print(f"File \"{path}\" not found", file=stderr)
+        exit(1)
 
     reg_parser = RegParser(path='binaries/reg_parser')
 
