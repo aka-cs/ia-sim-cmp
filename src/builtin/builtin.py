@@ -73,8 +73,7 @@ def get_functions(module=src) -> [Function]:
     return result
 
 
-def get_code() -> [str]:
-    files_path = Path('src/src/')
+def get_code(files_path) -> [str]:
     files = files_path.glob('*.py')
     result = {}
     for file in files:

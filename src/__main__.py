@@ -60,7 +60,7 @@ if __name__ == '__main__':
     if os.path.exists(src_path / "out"):
         shutil.rmtree(src_path / "out")
     os.makedirs(src_path / "out", exist_ok=True)
-    code = get_code()
+    code = get_code(src_path / Path('src/src/'))
 
     python_code = [f"from builtin import *", '\n', *transpiler.transpile(ast)]
     with open(src_path / 'out/__main__.py', 'w') as f:
