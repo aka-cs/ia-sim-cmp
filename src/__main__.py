@@ -17,6 +17,8 @@ from sys import stderr
 
 if __name__ == '__main__':
     
+    src_path = Path(__file__).parent.parent
+    
     if os.getenv("FILE"):
         path = Path('run') / os.getenv("FILE")
     else:
@@ -26,22 +28,22 @@ if __name__ == '__main__':
                 print(f"File \"{sys.argv[1]}\" not found", file=stderr)
                 exit(1)
         else:
-            path = Path('run/program.kt')
+            path = src_path / Path('run/program.kt')
         
     if not path.exists():
         print(f"File \"{path}\" not found", file=stderr)
         exit(1)
 
-    reg_parser = RegParser(path='binaries/reg_parser')
+    reg_parser = RegParser(path=src_path / 'binaries/reg_parser')
 
-    tokenizer = Tokenizer(matches, path='binaries/tokenizer')
+    tokenizer = Tokenizer(matches, path=src_path / 'binaries/tokenizer')
 
     with open(path, 'r') as f:
         program = f.read()
 
     tokens = tokenizer.tokenize(program)
 
-    parser = Parser(Path('binaries/grammar_parser').resolve())
+    parser = Parser(Path(src_path / 'binaries/grammar_parser').resolve())
 
     error = Error(program)
     ast = None
@@ -55,17 +57,17 @@ if __name__ == '__main__':
 
     checker.start(ast)
 
-    if os.path.exists("out"):
-        shutil.rmtree("out")
-    os.makedirs("out", exist_ok=True)
+    if os.path.exists(src_path / "out"):
+        shutil.rmtree(src_path / "out")
+    os.makedirs(src_path / "out", exist_ok=True)
     code = get_code()
 
     python_code = [f"from builtin import *", '\n', *transpiler.transpile(ast)]
-    with open('out/__main__.py', 'w') as f:
+    with open(src_path / 'out/__main__.py', 'w') as f:
         f.write('\n'.join(python_code))
 
-    os.makedirs("out/builtin", exist_ok=True)
+    os.makedirs(src_path / "out/builtin", exist_ok=True)
     for file in code:
-        with open(f'out/builtin/{file.name}', 'w') as f:
+        with open(src_path / f'out/builtin/{file.name}', 'w') as f:
             for line in code[file]:
                 f.write(line)
