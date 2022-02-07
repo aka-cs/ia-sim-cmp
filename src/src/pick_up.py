@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from dataclasses import dataclass
 
 from .base_classes import Environment
 from .graph_environments import GraphEnvironment
@@ -32,7 +31,7 @@ class DistanceAndPathCalc:
             if current_distance > distance[current_vertex]:
                 continue
 
-            for neighbor, weight in env.edges[current_vertex].items():
+            for neighbor, weight in env.graph[current_vertex].items():
                 new_distance = current_distance + weight
 
                 if new_distance < distance[neighbor]:
@@ -53,7 +52,7 @@ class DistanceAndPathCalc:
                 continue
             path[current_vertex] = parent
 
-            for neighbor, weight in env.edges[current_vertex].items():
+            for neighbor, weight in env.graph[current_vertex].items():
                 new_distance = current_distance + weight
 
                 if new_distance < distance[neighbor]:

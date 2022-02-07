@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 
 from pathlib import Path
 
@@ -11,15 +12,25 @@ from _parser import Parser
 from checker import TypeChecker
 from tokenizer.token_matchers import matches
 from errors import UnexpectedToken, Error
+from sys import stderr
+
 
 if __name__ == '__main__':
+
+    if len(sys.argv) > 1:
+        if not Path(sys.argv[1]).is_file():
+            print(f"File \"{sys.argv[1]}\" not found", file=stderr)
+            exit(1)
+        path = sys.argv[1]
+    else:
+        path = 'src/test/program.kt'
 
     reg_parser = RegParser(path='binaries/reg_parser')
 
     tokenizer = Tokenizer(matches, path='binaries/tokenizer')
 
-    with open('src/test/program.kt', 'r') as file:
-        program = file.read()
+    with open(path, 'r') as f:
+        program = f.read()
 
     tokens = tokenizer.tokenize(program)
 
