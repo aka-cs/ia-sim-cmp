@@ -149,10 +149,10 @@ class PickUpVehicle(Vehicle):
         self.path_opt = HillClimbing()
 
     @abstractmethod
-    def update_cargo(self, cargo: MapObject, env: Environment) -> None:
+    def update_cargo(self, cargo: MapObject, env: GraphEnvironment) -> None:
         pass
 
-    def get_destiny(self, cargo: MapObject, env: Environment) -> str:
+    def get_destiny(self, cargo: MapObject, env: GraphEnvironment) -> str:
         return self.origin
 
     def get_objectives(self, env: Environment) -> [str]:
@@ -164,7 +164,7 @@ class PickUpVehicle(Vehicle):
                     break
         return places
 
-    def build_tour(self, objectives: [str], env: Environment) -> None:
+    def build_tour(self, objectives: [str], env: GraphEnvironment) -> None:
         places: [str] = env.get_places()
         self.calculator.calc(env)
         distance = self.calculator.distances
