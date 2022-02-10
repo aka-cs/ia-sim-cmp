@@ -171,7 +171,7 @@ Generator::PersonGenerator
     fun init(amount: Int): Void{
         super.init();
 
-        attr amount: Int = amount + 1;
+        attr amount: Int = amount;
     }
 
     fun generate(places: List<String>): MapObject{
