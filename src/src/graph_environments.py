@@ -12,10 +12,12 @@ class GraphEnvironment(Environment):
     objects: {str: {int: MapObject}}
     generators: {str: Generator}
 
-    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}):
+    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}, generators: {str: Generator}):
         # Guardamos el grafo y los objetos del entorno.
         self.graph = graph
         self.objects = objects
+        self.generators = generators
+        self.counter = 0
 
         # Nos aseguramos que la lista de objetos tenga el formato correcto.
         # Por cada localización del grafo.
@@ -27,8 +29,14 @@ class GraphEnvironment(Environment):
         # Si existe al menos una localización en la lista de objetos que no existe en el entorno,
         # lanzamos excepción.
         for place in objects:
+            for object_id in self.objects[place]:
+                self.counter = max(self.counter, object_id)
             if place not in graph:
                 raise Exception("Invalid objects list.")
+
+    def next(self):
+        self.counter += 1
+        return self.counter
 
     def get_places(self) -> [str]:
         """
@@ -63,23 +71,22 @@ class GraphEnvironment(Environment):
 
         # Si es un evento de adición, añadimos el elemento correspondiente.
         elif isinstance(event, SetEvent):
+            event.object.identifier = self.next()
             self.set_object(event.object)
 
-        max_id = 0
+        elif isinstance(event, GenerateEvent) and event.generator_name in self.generators:
+            map_object = self.generators[event.generator_name].generate(self.get_places())
+            map_object.identifier = self.next()
+            self.set_object(map_object)
+            next_genesis = self.generators[event.generator_name].next(event.time)
+            if next_genesis > event.time:
+                events.append(GenerateEvent(next_genesis, event.issuer_id, event.generator_name))
 
         # Actualizamos cada objeto del entorno.
         for map_object in self.get_objects():
-            max_id = max(max_id, map_object.identifier)
             # Si es un agente, actualizamos su estado.
             if isinstance(map_object, Agent):
                 events.extend(map_object.update_state(event, self))
-
-        if isinstance(event, GenerateEvent) and event.generator_name in self.generators:
-            map_object = self.generators[event.generator_name].generate(max_id + 1, self.get_places())
-            self.set_object(map_object)
-            if self.generators[event.generator_name].next() > event.time:
-                events.append(GenerateEvent(self.generators[event.generator_name].next(),
-                                            event.issuer_id, event.generator_name))
 
         # Lanzamos los eventos obtenidos.
         return events
@@ -121,9 +128,10 @@ class GraphEnvironment(Environment):
 class MapEnvironment(GraphEnvironment):
     positions: {str: Position}
 
-    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}, positions: {str: Position}):
+    def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}, positions: {str: Position},
+                 generators: {str: Generator}):
         # Guardamos el grafo y los objetos del entorno.
-        super().__init__(graph, objects)
+        super().__init__(graph, objects, generators)
 
         # Guardamos las posiciones.
         self.positions = positions

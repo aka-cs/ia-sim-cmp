@@ -98,6 +98,7 @@ class DownloadEvent(Event):
     """
     cargo_identifier: int
 
+
 @dataclass
 class GenerateEvent(Event):
     generator_name: str
@@ -114,11 +115,12 @@ class Position:
 
 @dataclass
 class Generator:
-    def generate(self, identifier: int, places: [str]) -> MapObject:
+    def generate(self, places: [str]) -> MapObject:
         pass
 
-    def next(self) -> int:
-        pass
+    @staticmethod
+    def next(time: int) -> int:
+        return 0
 
 
 @dataclass

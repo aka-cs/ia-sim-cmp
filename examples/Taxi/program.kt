@@ -30,7 +30,12 @@ MonteCarloHeuristic::TaxiHeuristic{
 
                             var distance: Float = pow(pow(position.x - step.x, 2) + pow(position.y - step.y, 2), 1/2);
                             distance = distance + pow(pow(destiny.x - step.x, 2) + pow(destiny.y - step.y, 2), 1/2);
-                            value = value + pow(constant, i) * map_object.payment / distance;
+                            if (distance == 0){
+                                value = infinity();
+                            }
+                            else{
+                                value = value + pow(constant, i) * map_object.payment / distance;
+                            }
                             position = destiny;
                             i = i + 1;
                         }
@@ -161,6 +166,34 @@ MapVehicle::Taxi
     }
 }
 
+Generator::PersonGenerator
+{
+    fun init(amount: Int): Void{
+        super.init();
+
+        attr amount: Int = amount + 1;
+    }
+
+    fun generate(places: List<String>): MapObject{
+        var place: String = places[uniformly_discrete(0, len(places) - 1)];
+        var destiny: String = places[uniformly_discrete(0, len(places) - 1)];
+        var payment: Int = uniformly_discrete(1, 1000);
+        var time: Int = uniformly_discrete(1, 1000);
+        var person: Person = Person(0, place, destiny, payment, time);
+
+        return person;
+    }
+
+    fun next(time: Int): Int{
+        this.amount = this.amount - 1;
+
+        if(this.amount == 0){
+            return 0;
+        }
+
+        return time + uniformly_discrete(0, 20);
+    }
+}
 
 
 fun main(): Void{
@@ -181,13 +214,14 @@ fun main(): Void{
     var graph_objects: Dict<String, Dict<Int, MapObject>> = {
                                                         "Alamar": {1 : Person(1, "Alamar", "10 de Octubre", 15, 100)},
                                                         "Vedado": {2 : Person(2, "Vedado", "10 de Octubre", 20, 100)},
-                                                        "La Vibora": {8 : Person(8, "La Vibora", "China", 1000, 5)}
+                                                        "La Vibora": {3 : Person(3, "La Vibora", "China", 1000, 5)}
                                                        };
-    var env: MapEnvironment = MapEnvironment(graph_edges, graph_objects, graph_places);
+    var generators:  Dict<String, Generator> = {"Person" : PersonGenerator(5)};
+    var env: MapEnvironment = MapEnvironment(graph_edges, graph_objects, graph_places, generators);
     var total_time: Int = 1000;
     var taxi_A = Taxi(3, "Alamar");
     var taxi_B = Taxi(4, "10 de Octubre");
-    var initial_events = [SetEvent(1, 0, taxi_A), SetEvent(0, 0, taxi_B)];
+    var initial_events = [SetEvent(1, 0, taxi_A), SetEvent(0, 0, taxi_B), GenerateEvent(2, 0, "Person")];
     simulate_environment(env, initial_events, total_time);
 }
 
