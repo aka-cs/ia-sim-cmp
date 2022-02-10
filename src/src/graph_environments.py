@@ -1,5 +1,6 @@
 from __future__ import annotations
-from .base_classes import Event, SetEvent, DeleteEvent, MapObject, Agent, Position, Environment
+from .base_classes import Event, SetEvent, DeleteEvent, GenerateEvent, MapObject, Agent, Position, Generator, \
+    Environment
 
 
 class GraphEnvironment(Environment):
@@ -9,6 +10,7 @@ class GraphEnvironment(Environment):
     """
     graph: {str: {str: float}}
     objects: {str: {int: MapObject}}
+    generators: {str: Generator}
 
     def __init__(self, graph: {str: {str: float}}, objects: {str: {int: MapObject}}):
         # Guardamos el grafo y los objetos del entorno.
@@ -53,6 +55,8 @@ class GraphEnvironment(Environment):
         Dado un evento, actualiza el entorno simulado.
         """
 
+        events = []
+
         # Si es un evento de borrado, borramos el elemento correspondiente en la posición dada.
         if isinstance(event, DeleteEvent):
             self.remove_object(event.position, event.object_id)
@@ -61,13 +65,21 @@ class GraphEnvironment(Environment):
         elif isinstance(event, SetEvent):
             self.set_object(event.object)
 
-        events = []
+        max_id = 0
 
         # Actualizamos cada objeto del entorno.
         for map_object in self.get_objects():
+            max_id = max(max_id, map_object.identifier)
             # Si es un agente, actualizamos su estado.
             if isinstance(map_object, Agent):
                 events.extend(map_object.update_state(event, self))
+
+        if isinstance(event, GenerateEvent) and event.generator_name in self.generators:
+            map_object = self.generators[event.generator_name].generate(max_id + 1, self.get_places())
+            self.set_object(map_object)
+            if self.generators[event.generator_name].next() > event.time:
+                events.append(GenerateEvent(self.generators[event.generator_name].next(),
+                                            event.issuer_id, event.generator_name))
 
         # Lanzamos los eventos obtenidos.
         return events
