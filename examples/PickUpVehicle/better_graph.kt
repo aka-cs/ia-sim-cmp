@@ -13,6 +13,6 @@ fun main(): Void{
                    "C": {2: MapObject(2, "C")},
                    "D": {4: MapObject(4, "D")}};
 
-    var env = GraphEnvironment(edges, objects);
+    var env = GraphEnvironment(edges, objects, {});
     simulate_environment(env, [Event(0, 1)], 1000);
 }
